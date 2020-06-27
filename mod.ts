@@ -49,12 +49,12 @@ export class S3Client {
   async getObject(
     key: string,
     options?: GetObjectOptions,
-  ): Promise<ReadableStream<Uint8Array>> {
+  ): Promise<Uint8Array> {
     const resp = await this._doRequest(key, "GET", {});
     if (!resp.ok) {
       throw new Error(`Failed to get object: ${resp.statusText}`);
     }
-    return resp.body!;
+    return new Uint8Array(await resp.arrayBuffer());
   }
 
   async putObject(
