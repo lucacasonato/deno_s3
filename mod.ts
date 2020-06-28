@@ -47,8 +47,9 @@ export class S3Client {
   async getObject(
     key: string,
     options?: GetObjectOptions,
-  ): Promise<Uint8Array> {
+  ): Promise<Uint8Array | undefined> {
     const resp = await this._doRequest(key, "GET", {});
+    if (resp.status === 404) return undefined;
     if (!resp.ok) {
       throw new Error(
         `Failed to get object: ${resp.statusText}\n${await resp.text()}`,
