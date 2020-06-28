@@ -52,7 +52,7 @@ export class S3Client {
   ): Promise<Uint8Array> {
     const resp = await this._doRequest(key, "GET", {});
     if (!resp.ok) {
-      throw new Error(`Failed to get object: ${resp.statusText}`);
+      throw new Error(`Failed to get object: ${resp.statusText}\n${await resp.text()}`);
     }
     return new Uint8Array(await resp.arrayBuffer());
   }
@@ -68,7 +68,7 @@ export class S3Client {
     }
     const resp = await this._doRequest(key, "PUT", headers, body);
     if (!resp.ok) {
-      throw new Error(`Failed to put object: ${resp.statusText}`);
+      throw new Error(`Failed to put object: ${resp.statusText}\n${await resp.text()}`);
     }
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
