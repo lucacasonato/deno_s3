@@ -1,5 +1,5 @@
 import { AWSSignerV4, sha256 } from "./deps.ts";
-import {
+import type {
   GetObjectOptions,
   PutObjectResponse,
   PutObjectOptions,
@@ -17,10 +17,10 @@ export class S3Client {
   #host: string;
 
   constructor(private config: S3Config) {
-    this.#signer = new AWSSignerV4(
-      config.region,
-      { awsAccessKeyId: config.accessKeyID, awsSecretKey: config.secretKey },
-    );
+    this.#signer = new AWSSignerV4(config.region, {
+      awsAccessKeyId: config.accessKeyID,
+      awsSecretKey: config.secretKey,
+    });
     this.#host = `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
