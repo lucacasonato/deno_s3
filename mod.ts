@@ -66,6 +66,7 @@ export class S3Client {
     const headers: HeadersInit = {};
     if (options?.acl) {
       headers["x-amz-acl"] = options?.acl;
+      headers["content-length"] = body.length.toFixed(0);
     }
     const resp = await this._doRequest(key, "PUT", headers, body);
     if (!resp.ok) {
