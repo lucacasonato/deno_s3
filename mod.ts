@@ -37,6 +37,9 @@ export class S3Client {
       "utf8",
       "hex",
     ) as string;
+    if (body) {
+      signedHeaders["content-length"] = body.length.toFixed(0);
+    }
     return fetch(url, {
       method,
       headers: signedHeaders,
@@ -48,7 +51,7 @@ export class S3Client {
     key: string,
     options?: GetObjectOptions,
   ): Promise<Uint8Array | undefined> {
-    const resp = await this._doRequest(key, "GET", {});
+    const resp = await this._doRequest(encodeURIComponent(key), "GET", {});
     if (resp.status === 404) return undefined;
     if (!resp.ok) {
       throw new Error(
@@ -66,9 +69,13 @@ export class S3Client {
     const headers: HeadersInit = {};
     if (options?.acl) {
       headers["x-amz-acl"] = options?.acl;
-      headers["content-length"] = body.length.toFixed(0);
     }
-    const resp = await this._doRequest(key, "PUT", headers, body);
+    const resp = await this._doRequest(
+      encodeURIComponent(key),
+      "PUT",
+      headers,
+      body,
+    );
     if (!resp.ok) {
       throw new Error(
         `Failed to put object: ${resp.statusText}\n${await resp.text()}`,
