@@ -51,7 +51,7 @@ export class S3Client {
     key: string,
     options?: GetObjectOptions,
   ): Promise<Uint8Array | undefined> {
-    const resp = await this._doRequest(encodeURIComponent(key), "GET", {});
+    const resp = await this._doRequest(key, "GET", {});
     if (resp.status === 404) return undefined;
     if (!resp.ok) {
       throw new Error(
@@ -71,7 +71,7 @@ export class S3Client {
       headers["x-amz-acl"] = options?.acl;
     }
     const resp = await this._doRequest(
-      encodeURIComponent(key),
+      key,
       "PUT",
       headers,
       body,
