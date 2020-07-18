@@ -4,7 +4,14 @@ import type {
   GetObjectOptions,
   PutObjectOptions,
   PutObjectResponse,
+  DeleteObjectOptions,
+  DeleteObjectResponse,
 } from "./types.ts";
+import { S3Error } from "./error.ts";
+
+interface Params {
+  [key: string]: string;
+}
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
@@ -26,12 +33,22 @@ export class S3Bucket {
 
   private _doRequest(
     path: string,
+    params: Params,
     method: string,
-    headers: { [key: string]: string },
+    headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = `${this.#host}${path}`;
-    const signedHeaders = this.#signer.sign("s3", url, method, headers, body);
+    const url = new URL(path, this.#host);
+    for (const key in params) {
+      url.searchParams.set(key, params[key]);
+    }
+    const signedHeaders = this.#signer.sign(
+      "s3",
+      url.toString(),
+      method,
+      headers,
+      body,
+    );
     signedHeaders["x-amz-content-sha256"] = sha256(
       body ?? "",
       "utf8",
@@ -50,12 +67,12 @@ export class S3Bucket {
   async getObject(
     key: string,
     options?: GetObjectOptions,
-  ): Promise<Uint8Array | undefined> {
-    const resp = await this._doRequest(key, "GET", {});
-    if (resp.status === 404) return undefined;
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to get object: ${resp.statusText}\n${await resp.text()}`,
+  ): Promise<Uint8Array> {
+    const resp = await this._doRequest(key, {}, "GET", {});
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
       );
     }
     return new Uint8Array(await resp.arrayBuffer());
@@ -72,17 +89,40 @@ export class S3Bucket {
     }
     const resp = await this._doRequest(
       key,
+      {},
       "PUT",
       headers,
       body,
     );
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to put object: ${resp.statusText}\n${await resp.text()}`,
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to put object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
       );
     }
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
+    };
+  }
+
+  async deleteObject(
+    key: string,
+    options?: DeleteObjectOptions,
+  ): Promise<DeleteObjectResponse> {
+    const params: Params = {};
+    if (options?.versionId) {
+      params.versionId = options.versionId;
+    }
+    const resp = await this._doRequest(key, params, "DELETE", {});
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to put object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+    return {
+      versionID: resp.headers.get("x-amz-version-id") ?? undefined,
+      deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
     };
   }
 }

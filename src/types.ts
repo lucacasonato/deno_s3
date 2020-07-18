@@ -13,3 +13,12 @@ export interface PutObjectOptions {
 export interface PutObjectResponse {
   etag: string;
 }
+
+export interface DeleteObjectOptions {
+  versionId?: string;
+}
+
+export interface DeleteObjectResponse {
+  versionID?: string;
+  deleteMarker: boolean;
+}
