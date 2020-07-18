@@ -171,9 +171,88 @@ export interface PutObjectOptions {
     | "aws-exec-read"
     | "bucket-owner-read"
     | "bucket-owner-full-control";
+
+  /** Can be used to specify caching behavior along the request/reply chain. */
+  cacheControl?: string;
+
+  /** Specifies presentational information for the object. */
+  contentDisposition?: string;
+
+  /** 
+   * Specifies what content encodings have been applied to the object
+   * and thus what decoding mechanisms must be applied to obtain the
+   * media-type referenced by the Content-Type field.
+   */
+  contentEncoding?: string;
+
+  /** The language the content is in. */
+  contentLanguage?: string;
+
+  /** A standard MIME type describing the format of the object data. */
+  contentType?: string;
+
+  /** The date and time at which the object is no longer cacheable. */
+  expires?: Date;
+
+  // TOOD: better structured data
+  /** Gives the grantee READ, READ_ACP, and WRITE_ACP permissions on the object. */
+  grantFullControl?: string;
+
+  // TOOD: better structured data
+  /** Allows grantee to read the object data and its metadata. */
+  grantRead?: string;
+
+  // TOOD: better structured data
+  /** Allows grantee to write the ACL for the applicable object. */
+  grantReadAcp?: string;
+
+  // TOOD: better structured data
+  /** Allows grantee to write the ACL for the applicable object. */
+  grantWriteAcp?: string;
+
+  /** Specifies whether a legal hold will be applied to this object. */
+  legalHold?: "ON" | "OFF";
+
+  /** The Object Lock mode that you want to apply to this object. */
+  lockMode?: "GOVERNANCE" | "COMPLIANCE";
+
+  /** The date and time when you want this object's Object Lock to expire. */
+  lockRetainUntil?: Date;
+
+  /**
+   * If you don't specify, S3 Standard is the default storage class.
+   * Amazon S3 supports other storage classes.
+   */
+  storageClass?:
+    | "STANDARD"
+    | "REDUCED_REDUNDANCY"
+    | "STANDARD_IA"
+    | "ONEZONE_IA"
+    | "INTELLIGENT_TIERING"
+    | "GLACIER"
+    | "DEEP_ARCHIVE";
+
+  tags?: { [key: string]: string };
+
+  /**
+   * If the bucket is configured as a website, redirects requests for this
+   * object to another object in the same bucket or to an external URL.
+   * Amazon S3 stores the value of this header in the object metadata.
+   */
+  websiteRedirectLocation?: string;
 }
+
 export interface PutObjectResponse {
+  /**
+   * An ETag is an opaque identifier assigned by a web server to a
+   * specific version of a resource found at a URL.
+   */
   etag: string;
+
+  /**
+   * Version of the object.
+   */
+  versionId?: string;
 }
 
 export interface DeleteObjectOptions {

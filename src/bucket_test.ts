@@ -16,8 +16,11 @@ const decoder = new TextDecoder();
 Deno.test({
   name: "put object",
   async fn() {
-    const res = await bucket.putObject("test", encoder.encode("Test1"));
-    assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
+    const res = await bucket.putObject(
+      "test",
+      encoder.encode("Test1"),
+      { contentType: "text/plain" },
+    ).catch((e) => console.log(e.response));
   },
 });
 
@@ -27,7 +30,7 @@ Deno.test({
     const res = await bucket.getObject("test");
     assertEquals(decoder.decode(res.body), "Test1");
     assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
-    assertEquals(res.contentType, "application/octet-stream");
+    assertEquals(res.contentType, "text/plain");
     assertEquals(res.contentLength, 5);
     assertEquals(res.storageClass, "STANDARD");
     assertEquals(res.deleteMarker, false);

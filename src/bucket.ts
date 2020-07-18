@@ -153,9 +153,48 @@ export class S3Bucket {
     body: Uint8Array,
     options?: PutObjectOptions,
   ): Promise<PutObjectResponse> {
-    const headers: HeadersInit = {};
-    if (options?.acl) {
-      headers["x-amz-acl"] = options?.acl;
+    const headers: Params = {};
+    if (options?.acl) headers["x-amz-acl"] = options.acl;
+    if (options?.cacheControl) headers["Cache-Control"] = options.cacheControl;
+    if (options?.contentDisposition) {
+      headers["Content-Disposition"] = options.contentDisposition;
+    }
+    if (options?.contentEncoding) {
+      headers["Content-Encoding"] = options.contentEncoding;
+    }
+    if (options?.contentLanguage) {
+      headers["Content-Language"] = options.contentLanguage;
+    }
+    if (options?.contentType) headers["Content-Type"] = options.contentType;
+    if (options?.grantFullControl) {
+      headers["x-amz-grant-full-control"] = options.grantFullControl;
+    }
+    if (options?.grantRead) headers["x-amz-grant-read"] = options.grantRead;
+    if (options?.grantReadAcp) {
+      headers["x-amz-grant-read-acp"] = options.grantReadAcp;
+    }
+    if (options?.grantWriteAcp) {
+      headers["x-amz-grant-write-acp"] = options.grantWriteAcp;
+    }
+    if (options?.storageClass) {
+      headers["x-amz-storage-class"] = options.storageClass;
+    }
+
+    if (options?.websiteRedirectLocation) {
+      headers["x-amz-website-redirect-location"] =
+        options.websiteRedirectLocation;
+    }
+    if (options?.tags) {
+      const p = new URLSearchParams(options.tags);
+      headers["x-amz-tagging"] = p.toString();
+    }
+    if (options?.lockMode) headers["x-amz-object-lock-mode"] = options.lockMode;
+    if (options?.lockRetainUntil) {
+      headers["x-amz-object-lock-retain-until-date"] = options.lockRetainUntil
+        .toString();
+    }
+    if (options?.legalHold) {
+      headers["x-amz-object-lock-legal-hold"] = options.legalHold;
     }
     const resp = await this._doRequest(
       key,
@@ -172,6 +211,7 @@ export class S3Bucket {
     }
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
+      versionId: resp.headers.get("x-amz-version-id") ?? undefined,
     };
   }
 
