@@ -24,7 +24,7 @@ jobs:
         run: deno fmt --check
 
       - name: Lint
-        run: deno lint --unstable
+        run: deno lint
 
       - name: Start minio
         run: |
@@ -32,4 +32,4 @@ jobs:
           aws --endpoint-url "http://localhost:9000" s3 mb s3://test
 
       - name: Test
-        run: deno test
+        run: deno test --allow-net --allow-env
