@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "../test_deps.ts";
+import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
 
 const bucket = new S3Bucket({
@@ -26,5 +26,14 @@ Deno.test({
     const resp = await bucket.getObject("test");
     assert(resp);
     assertEquals(decoder.decode(resp), "Test1");
+  },
+});
+
+Deno.test({
+  name: "delete object",
+  async fn() {
+    assert(await bucket.getObject("test"));
+    await bucket.deleteObject("test");
+    await assertThrowsAsync(() => bucket.getObject("test"));
   },
 });
