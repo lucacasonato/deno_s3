@@ -6,6 +6,7 @@ import type {
   PutObjectResponse,
   DeleteObjectOptions,
   DeleteObjectResponse,
+  GetObjectResponse,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 
@@ -67,15 +68,84 @@ export class S3Bucket {
   async getObject(
     key: string,
     options?: GetObjectOptions,
-  ): Promise<Uint8Array> {
-    const resp = await this._doRequest(key, {}, "GET", {});
-    if (resp.status !== 200) {
+  ): Promise<GetObjectResponse> {
+    const params: Params = {};
+    const headers: Params = {};
+    if (options?.ifMatch) headers["If-Match"] = options.ifMatch;
+    if (options?.ifNoneMatch) headers["If-None-Match"] = options.ifNoneMatch;
+    if (options?.ifModifiedSince) {
+      headers["If-Modified-Since"] = options.ifModifiedSince.toISOString();
+    }
+    if (options?.ifUnmodifiedSince) {
+      headers["If-Unmodified-Since"] = options.ifUnmodifiedSince.toISOString();
+    }
+    if (options?.partNumber) {
+      params["PartNumber"] = options.partNumber.toFixed(0);
+    }
+    if (options?.responseCacheControl) {
+      params["ResponseCacheControl"] = options.responseCacheControl;
+    }
+    if (options?.responseContentDisposition) {
+      params["ResponseContentDisposition"] = options.responseContentDisposition;
+    }
+    if (options?.responseContentEncoding) {
+      params["ResponseContentEncoding"] = options.responseContentEncoding;
+    }
+    if (options?.responseContentLanguage) {
+      params["ResponseContentLanguage"] = options.responseContentLanguage;
+    }
+    if (options?.responseContentType) {
+      params["ResponseContentType"] = options.responseContentType;
+    }
+    if (options?.responseExpires) {
+      params["ResponseExpires"] = options.responseExpires;
+    }
+    if (options?.versionId) {
+      params["VersionId"] = options.versionId;
+    }
+
+    const res = await this._doRequest(key, params, "GET", headers);
+    if (res.status !== 200) {
       throw new S3Error(
-        `Failed to get object: ${resp.status} ${resp.statusText}`,
-        await resp.text(),
+        `Failed to get object: ${res.status} ${res.statusText}`,
+        await res.text(),
       );
     }
-    return new Uint8Array(await resp.arrayBuffer());
+
+    const expires = res.headers.get("expires");
+    const lockRetainUntil = res.headers.get(
+      "x-amz-object-lock-retain-until-date",
+    );
+    const partsCount = res.headers.get("x-amz-mp-parts-count");
+
+    return {
+      body: new Uint8Array(await res.arrayBuffer()),
+      contentLength: parseInt(res.headers.get("Content-Length")!),
+      deleteMarker: res.headers.get("x-amz-delete-marker") === "true",
+      etag: JSON.parse(res.headers.get("etag")!),
+      lastModified: new Date(res.headers.get("Last-Modified")!),
+      missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
+      storageClass: res.headers.get("x-amz-storage-class") as any ?? "STANDARD",
+      taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
+
+      cacheControl: res.headers.get("Cache-Control") ?? undefined,
+      contentDisposition: res.headers.get("Content-Disposition") ?? undefined,
+      contentEncoding: res.headers.get("Content-Encoding") ?? undefined,
+      contentLanguage: res.headers.get("Content-Language") ?? undefined,
+      contentType: res.headers.get("Content-Type") ?? undefined,
+      expires: expires ? new Date(expires) : undefined,
+      legalHold: res.headers.get("x-amz-object-lock-legal-hold") as any ??
+        undefined,
+      lockMode: res.headers.get("x-amz-object-lock-mode") as any ??
+        undefined,
+      lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
+      partsCount: partsCount ? parseInt(partsCount) : undefined,
+      replicationStatus: res.headers.get("x-amz-replication-status") as any ??
+        undefined,
+      versionId: res.headers.get("x-amz-version-id") ?? undefined,
+      websiteRedirectLocation:
+        res.headers.get("x-amz-website-redirect-location") ?? undefined,
+    };
   }
 
   async putObject(

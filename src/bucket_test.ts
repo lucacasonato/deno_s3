@@ -16,17 +16,22 @@ const decoder = new TextDecoder();
 Deno.test({
   name: "put object",
   async fn() {
-    const resp = await bucket.putObject("test", encoder.encode("Test1"));
-    assertEquals(resp.etag, "e1b849f9631ffc1829b2e31402373e3c");
+    const res = await bucket.putObject("test", encoder.encode("Test1"));
+    assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
   },
 });
 
 Deno.test({
   name: "get object success",
   async fn() {
-    const resp = await bucket.getObject("test");
-    assert(resp);
-    assertEquals(decoder.decode(resp), "Test1");
+    const res = await bucket.getObject("test");
+    assertEquals(decoder.decode(res.body), "Test1");
+    assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
+    assertEquals(res.contentType, "application/octet-stream");
+    assertEquals(res.contentLength, 5);
+    assertEquals(res.storageClass, "STANDARD");
+    assertEquals(res.deleteMarker, false);
+    assert(res.lastModified < new Date());
   },
 });
 
