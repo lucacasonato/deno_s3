@@ -1,3 +1,19 @@
+/** The mode the object lock is in. */
+export type LockMode = "GOVERNANCE" | "COMPLIANCE";
+
+/** The status of a object replication. */
+export type ReplicationStatus = "COMPLETE" | "PENDING" | "FAILED" | "REPLICA";
+
+/** A S3 storage class.  */
+export type StorageClass =
+  | "STANDARD"
+  | "REDUCED_REDUNDANCY"
+  | "STANDARD_IA"
+  | "ONEZONE_IA"
+  | "INTELLIGENT_TIERING"
+  | "GLACIER"
+  | "DEEP_ARCHIVE";
+
 export interface GetObjectOptions {
   /**
    * Return the object only if its entity tag (ETag) is the same as the one
@@ -115,10 +131,10 @@ export interface GetObjectResponse {
    * is only returned if you have permission to view an object's legal
    * hold status.
    */
-  legalHold?: "ON" | "OFF";
+  legalHold?: boolean;
 
   /** The Object Lock mode currently in place for this object. */
-  lockMode?: "GOVERNANCE" | "COMPLIANCE";
+  lockMode?: LockMode;
 
   /** The date and time when this object's Object Lock will expire. */
   lockRetainUntil?: Date;
@@ -127,20 +143,13 @@ export interface GetObjectResponse {
    * Amazon S3 can return this if your request involves a bucket that is
    * either a source or destination in a replication rule.
    * */
-  replicationStatus?: "COMPLETE" | "PENDING" | "FAILED" | "REPLICA";
+  replicationStatus?: ReplicationStatus;
 
   /**
    * Provides storage class information of the object. Amazon S3 returns
    * this for all objects except for S3 Standard storage class objects.
    */
-  storageClass:
-    | "STANDARD"
-    | "REDUCED_REDUNDANCY"
-    | "STANDARD_IA"
-    | "ONEZONE_IA"
-    | "INTELLIGENT_TIERING"
-    | "GLACIER"
-    | "DEEP_ARCHIVE";
+  storageClass: StorageClass;
 
   /** The number of tags, if any, on the object. */
   taggingCount: number;
@@ -211,10 +220,10 @@ export interface PutObjectOptions {
   grantWriteAcp?: string;
 
   /** Specifies whether a legal hold will be applied to this object. */
-  legalHold?: "ON" | "OFF";
+  legalHold?: boolean;
 
   /** The Object Lock mode that you want to apply to this object. */
-  lockMode?: "GOVERNANCE" | "COMPLIANCE";
+  lockMode?: LockMode;
 
   /** The date and time when you want this object's Object Lock to expire. */
   lockRetainUntil?: Date;
@@ -223,14 +232,7 @@ export interface PutObjectOptions {
    * If you don't specify, S3 Standard is the default storage class.
    * Amazon S3 supports other storage classes.
    */
-  storageClass?:
-    | "STANDARD"
-    | "REDUCED_REDUNDANCY"
-    | "STANDARD_IA"
-    | "ONEZONE_IA"
-    | "INTELLIGENT_TIERING"
-    | "GLACIER"
-    | "DEEP_ARCHIVE";
+  storageClass?: StorageClass;
 
   tags?: { [key: string]: string };
 

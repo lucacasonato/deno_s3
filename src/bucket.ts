@@ -7,6 +7,9 @@ import type {
   DeleteObjectOptions,
   DeleteObjectResponse,
   GetObjectResponse,
+  LockMode,
+  ReplicationStatus,
+  StorageClass,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 
@@ -117,6 +120,7 @@ export class S3Bucket {
       "x-amz-object-lock-retain-until-date",
     );
     const partsCount = res.headers.get("x-amz-mp-parts-count");
+    const legalHold = res.headers.get("x-amz-object-lock-legal-hold");
 
     return {
       body: new Uint8Array(await res.arrayBuffer()),
@@ -125,7 +129,8 @@ export class S3Bucket {
       etag: JSON.parse(res.headers.get("etag")!),
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
-      storageClass: res.headers.get("x-amz-storage-class") as any ?? "STANDARD",
+      storageClass: res.headers.get("x-amz-storage-class") as StorageClass ??
+        "STANDARD",
       taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
 
       cacheControl: res.headers.get("Cache-Control") ?? undefined,
@@ -134,14 +139,14 @@ export class S3Bucket {
       contentLanguage: res.headers.get("Content-Language") ?? undefined,
       contentType: res.headers.get("Content-Type") ?? undefined,
       expires: expires ? new Date(expires) : undefined,
-      legalHold: res.headers.get("x-amz-object-lock-legal-hold") as any ??
-        undefined,
-      lockMode: res.headers.get("x-amz-object-lock-mode") as any ??
+      legalHold: legalHold ? true : (legalHold === "OFF" ? false : undefined),
+      lockMode: res.headers.get("x-amz-object-lock-mode") as LockMode ??
         undefined,
       lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
-      replicationStatus: res.headers.get("x-amz-replication-status") as any ??
-        undefined,
+      replicationStatus:
+        res.headers.get("x-amz-replication-status") as ReplicationStatus ??
+          undefined,
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
@@ -194,7 +199,9 @@ export class S3Bucket {
         .toString();
     }
     if (options?.legalHold) {
-      headers["x-amz-object-lock-legal-hold"] = options.legalHold;
+      headers["x-amz-object-lock-legal-hold"] = options.legalHold
+        ? "ON"
+        : "OFF";
     }
     const resp = await this._doRequest(
       key,
