@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    steps:
+      - name: Setup Deno environment
+        uses: denolib/setup-deno@v1.3.0
+        with:
+          deno-version: v1.2.0
+
+      - uses: actions/checkout@v2
+
+      - name: Format
+        run: deno fmt --check
+
+      - name: Lint
+        run: deno lint --unstable
+
+      - name: Start minio
+        run: |
+          docker-compose up -d
+          aws --endpoint-url "http://localhost:9000" s3 mb s3://test
+
+      - name: Test
+        run: deno test --allow-net --allow-env
