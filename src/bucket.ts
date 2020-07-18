@@ -5,7 +5,9 @@ import type {
   PutObjectOptions,
   PutObjectResponse,
   DeleteObjectOptions,
+  DeleteObjectResponse,
 } from "./types.ts";
+import { S3Error } from "./error.ts";
 
 interface Params {
   [key: string]: string;
@@ -67,16 +69,13 @@ export class S3Bucket {
     options?: GetObjectOptions,
   ): Promise<Uint8Array> {
     const resp = await this._doRequest(key, {}, "GET", {});
-    const data = new Uint8Array(await resp.arrayBuffer());
-    if (resp.status === 404) {
-      throw new Error("Object not found.");
-    }
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to get object: ${resp.statusText}\n${await resp.text()}`,
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
       );
     }
-    return data;
+    return new Uint8Array(await resp.arrayBuffer());
   }
 
   async putObject(
@@ -95,9 +94,10 @@ export class S3Bucket {
       headers,
       body,
     );
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to put object: ${resp.statusText}\n${await resp.text()}`,
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to put object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
       );
     }
     return {
@@ -108,19 +108,21 @@ export class S3Bucket {
   async deleteObject(
     key: string,
     options?: DeleteObjectOptions,
-  ): Promise<void> {
+  ): Promise<DeleteObjectResponse> {
     const params: Params = {};
     if (options?.versionId) {
       params.versionId = options.versionId;
     }
     const resp = await this._doRequest(key, params, "DELETE", {});
-    if (resp.status === 404) throw new Error("Object not found.");
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to get object: ${resp.statusText}\n${await resp.text()}`,
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to put object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
       );
     }
-    await resp.arrayBuffer();
-    return;
+    return {
+      versionID: resp.headers.get("x-amz-version-id") ?? undefined,
+      deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
+    };
   }
 }

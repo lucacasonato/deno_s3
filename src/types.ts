@@ -17,3 +17,8 @@ export interface PutObjectResponse {
 export interface DeleteObjectOptions {
   versionId?: string;
 }
+
+export interface DeleteObjectResponse {
+  versionID?: string;
+  deleteMarker: boolean;
+}

@@ -1,5 +1,6 @@
 import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3Error } from "./error.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
@@ -21,7 +22,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "get object",
+  name: "get object success",
   async fn() {
     const resp = await bucket.getObject("test");
     assert(resp);
@@ -30,10 +31,28 @@ Deno.test({
 });
 
 Deno.test({
+  name: "get object not found",
+  async fn() {
+    await assertThrowsAsync(
+      () => bucket.getObject("test2"),
+      S3Error,
+      "404 Not Found",
+    );
+  },
+});
+
+Deno.test({
   name: "delete object",
   async fn() {
     assert(await bucket.getObject("test"));
-    await bucket.deleteObject("test");
-    await assertThrowsAsync(() => bucket.getObject("test"));
+    assertEquals(
+      await bucket.deleteObject("test"),
+      { deleteMarker: false, versionID: undefined },
+    );
+    await assertThrowsAsync(
+      () => bucket.getObject("test"),
+      S3Error,
+      "404 Not Found",
+    );
   },
 });
