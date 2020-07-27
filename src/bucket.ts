@@ -42,7 +42,7 @@ export class S3Bucket {
     headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = new URL(path, this.#host);
+    const url = new URL(encodeURI(path), this.#host);
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
