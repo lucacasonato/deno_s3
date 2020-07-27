@@ -43,7 +43,7 @@ export class S3Bucket {
     headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = new URL(encodeURI(path), this.#host);
+    const url = new URL(encodeURIS3(path), this.#host);
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
@@ -244,4 +244,27 @@ export class S3Bucket {
       deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
     };
   }
+}
+
+function encodeURIS3(input: string): string {
+  let result = "";
+  for (const ch of input) {
+    if (
+      (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") ||
+      (ch >= "0" && ch <= "9") || ch == "_" || ch == "-" || ch == "~" ||
+      ch == "."
+    ) {
+      result += ch;
+    } else if (ch == "/") {
+      result += "/";
+    } else {
+      result += "%" + stringToHex(ch);
+    }
+  }
+  return result;
+}
+
+function stringToHex(input: string) {
+  return [...input].map((s) => s.charCodeAt(0).toString(16)).join()
+    .toUpperCase();
 }
