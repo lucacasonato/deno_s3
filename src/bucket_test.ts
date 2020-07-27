@@ -20,7 +20,40 @@ Deno.test({
       "test",
       encoder.encode("Test1"),
       { contentType: "text/plain" },
-    ).catch((e) => console.log(e.response));
+    );
+  },
+});
+
+Deno.test({
+  name: "put object with % in key",
+  async fn() {
+    const res = await bucket.putObject(
+      "ltest/versions/1.0.0/raw/fixtures/%",
+      encoder.encode("Test1"),
+      { contentType: "text/plain" },
+    );
+  },
+});
+
+Deno.test({
+  name: "put object with @ in key",
+  async fn() {
+    const res = await bucket.putObject(
+      "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
+      encoder.encode("bla"),
+      { contentType: "text/plain" },
+    );
+  },
+});
+
+Deno.test({
+  name: "put object with 日本語 in key",
+  async fn() {
+    const res = await bucket.putObject(
+      "servest/versions/1.0.0/raw/fixtures/日本語.txt",
+      encoder.encode("bla"),
+      { contentType: "text/plain" },
+    );
   },
 });
 
@@ -28,6 +61,7 @@ Deno.test({
   name: "get object success",
   async fn() {
     const res = await bucket.getObject("test");
+    assert(res);
     assertEquals(decoder.decode(res.body), "Test1");
     assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
     assertEquals(res.contentType, "text/plain");
@@ -41,11 +75,7 @@ Deno.test({
 Deno.test({
   name: "get object not found",
   async fn() {
-    await assertThrowsAsync(
-      () => bucket.getObject("test2"),
-      S3Error,
-      "404 Not Found",
-    );
+    assertEquals(await bucket.getObject("test2"), undefined);
   },
 });
 
@@ -57,10 +87,6 @@ Deno.test({
       await bucket.deleteObject("test"),
       { deleteMarker: false, versionID: undefined },
     );
-    await assertThrowsAsync(
-      () => bucket.getObject("test"),
-      S3Error,
-      "404 Not Found",
-    );
+    assertEquals(await bucket.getObject("test"), undefined);
   },
 });

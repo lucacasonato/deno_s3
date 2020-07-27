@@ -43,7 +43,7 @@ export class S3Bucket {
     headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = new URL(encodeURI(path), this.#host);
+    const url = new URL(encodeURIS3(path), this.#host);
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
@@ -109,7 +109,11 @@ export class S3Bucket {
     }
 
     const res = await this._doRequest(key, params, "GET", headers);
-    if (res.status === 404) return undefined;
+    if (res.status === 404) {
+      // clean up http body
+      await res.arrayBuffer();
+      return undefined;
+    }
     if (res.status !== 200) {
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
@@ -244,4 +248,29 @@ export class S3Bucket {
       deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
     };
   }
+}
+
+function encodeURIS3(input: string): string {
+  let result = "";
+  for (const ch of input) {
+    if (
+      (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") ||
+      (ch >= "0" && ch <= "9") || ch == "_" || ch == "-" || ch == "~" ||
+      ch == "."
+    ) {
+      result += ch;
+    } else if (ch == "/") {
+      result += "/";
+    } else {
+      result += stringToHex(ch);
+    }
+  }
+  return result;
+}
+
+const encoder = new TextEncoder();
+
+function stringToHex(input: string) {
+  return [...encoder.encode(input)].map((s) => "%" + s.toString(16)).join("")
+    .toUpperCase();
 }
