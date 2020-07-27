@@ -29,6 +29,7 @@ export class S3Bucket {
     this.#signer = new AWSSignerV4(config.region, {
       awsAccessKeyId: config.accessKeyID,
       awsSecretKey: config.secretKey,
+      sessionToken: config.sessionToken,
     });
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()

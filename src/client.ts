@@ -4,6 +4,7 @@ export interface S3Config {
   region: string;
   accessKeyID: string;
   secretKey: string;
+  sessionToken?: string;
   endpointURL?: string;
 }
 
