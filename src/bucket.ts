@@ -109,7 +109,11 @@ export class S3Bucket {
     }
 
     const res = await this._doRequest(key, params, "GET", headers);
-    if (res.status === 404) return undefined;
+    if (res.status === 404) {
+      // clean up http body
+      await res.arrayBuffer();
+      return undefined;
+    }
     if (res.status !== 200) {
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
