@@ -47,6 +47,17 @@ Deno.test({
 });
 
 Deno.test({
+  name: "put object with 日本語 in key",
+  async fn() {
+    const res = await bucket.putObject(
+      "servest/versions/1.0.0/raw/fixtures/日本語.txt",
+      encoder.encode("bla"),
+      { contentType: "text/plain" },
+    );
+  },
+});
+
+Deno.test({
   name: "get object success",
   async fn() {
     const res = await bucket.getObject("test");

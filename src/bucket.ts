@@ -262,13 +262,15 @@ function encodeURIS3(input: string): string {
     } else if (ch == "/") {
       result += "/";
     } else {
-      result += "%" + stringToHex(ch);
+      result += stringToHex(ch);
     }
   }
   return result;
 }
 
+const encoder = new TextEncoder();
+
 function stringToHex(input: string) {
-  return [...input].map((s) => s.charCodeAt(0).toString(16)).join()
+  return [...encoder.encode(input)].map((s) => "%" + s.toString(16)).join("")
     .toUpperCase();
 }
