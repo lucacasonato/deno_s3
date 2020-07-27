@@ -1,6 +1,5 @@
-import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
+import { assert, assertEquals } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
-import { S3Error } from "./error.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
@@ -88,5 +87,24 @@ Deno.test({
       { deleteMarker: false, versionID: undefined },
     );
     assertEquals(await bucket.getObject("test"), undefined);
+  },
+});
+
+Deno.test({
+  name: "copy object",
+  async fn() {
+    await bucket.putObject(
+      "test3",
+      encoder.encode("Test1"),
+    );
+    await bucket.copyObject("test3", "test4", {
+      contentType: "text/plain",
+      metadataDirective: "REPLACE",
+    }).catch((e) => console.log(e.response));
+    const res = await bucket.getObject("test4");
+    assert(res);
+    assertEquals(res.contentType, "text/plain");
+    assertEquals(res.contentLength, 5);
+    assertEquals(res.contentType, "text/plain");
   },
 });

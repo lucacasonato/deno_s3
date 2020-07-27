@@ -10,6 +10,7 @@ import type {
   LockMode,
   ReplicationStatus,
   StorageClass,
+  CopyObjectOptions,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 
@@ -209,6 +210,7 @@ export class S3Bucket {
         ? "ON"
         : "OFF";
     }
+
     const resp = await this._doRequest(
       key,
       {},
@@ -222,6 +224,100 @@ export class S3Bucket {
         await resp.text(),
       );
     }
+    return {
+      etag: JSON.parse(resp.headers.get("etag")!),
+      versionId: resp.headers.get("x-amz-version-id") ?? undefined,
+    };
+  }
+
+  async copyObject(
+    source: string,
+    destination: string,
+    options?: CopyObjectOptions,
+  ): Promise<PutObjectResponse> {
+    const headers: Params = {};
+    headers["x-amz-copy-source"] = new URL(encodeURIS3(source), this.#host)
+      .toString();
+    if (options?.acl) headers["x-amz-acl"] = options.acl;
+    if (options?.cacheControl) headers["Cache-Control"] = options.cacheControl;
+    if (options?.contentDisposition) {
+      headers["Content-Disposition"] = options.contentDisposition;
+    }
+    if (options?.contentEncoding) {
+      headers["Content-Encoding"] = options.contentEncoding;
+    }
+    if (options?.contentLanguage) {
+      headers["Content-Language"] = options.contentLanguage;
+    }
+    if (options?.contentType) headers["Content-Type"] = options.contentType;
+    if (options?.copyOnlyIfMatch) {
+      headers["x-amz-copy-source-if-match"] = options.copyOnlyIfMatch;
+    }
+    if (options?.copyOnlyIfNoneMatch) {
+      headers["x-amz-copy-source-if-none-match"] = options.copyOnlyIfNoneMatch;
+    }
+    if (options?.copyOnlyIfModifiedSince) {
+      headers["x-amz-copy-source-if-modified-since"] = options
+        .copyOnlyIfModifiedSince
+        .toISOString();
+    }
+    if (options?.copyOnlyIfUnmodifiedSince) {
+      headers["x-amz-copy-source-if-unmodified-since"] = options
+        .copyOnlyIfUnmodifiedSince
+        .toISOString();
+    }
+    if (options?.grantFullControl) {
+      headers["x-amz-grant-full-control"] = options.grantFullControl;
+    }
+    if (options?.grantRead) headers["x-amz-grant-read"] = options.grantRead;
+    if (options?.grantReadAcp) {
+      headers["x-amz-grant-read-acp"] = options.grantReadAcp;
+    }
+    if (options?.grantWriteAcp) {
+      headers["x-amz-grant-write-acp"] = options.grantWriteAcp;
+    }
+    if (options?.storageClass) {
+      headers["x-amz-storage-class"] = options.storageClass;
+    }
+
+    if (options?.websiteRedirectLocation) {
+      headers["x-amz-website-redirect-location"] =
+        options.websiteRedirectLocation;
+    }
+    if (options?.tags) {
+      const p = new URLSearchParams(options.tags);
+      headers["x-amz-tagging"] = p.toString();
+    }
+    if (options?.lockMode) headers["x-amz-object-lock-mode"] = options.lockMode;
+    if (options?.lockRetainUntil) {
+      headers["x-amz-object-lock-retain-until-date"] = options.lockRetainUntil
+        .toString();
+    }
+    if (options?.legalHold) {
+      headers["x-amz-object-lock-legal-hold"] = options.legalHold
+        ? "ON"
+        : "OFF";
+    }
+    if (options?.metadataDirective) {
+      headers["x-amz-metadata-directive"] = options.metadataDirective;
+    }
+    if (options?.taggingDirective) {
+      headers["x-amz-tagging-directive"] = options.taggingDirective;
+    }
+
+    const resp = await this._doRequest(
+      destination,
+      {},
+      "PUT",
+      headers,
+    );
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to copy object: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+    await resp.arrayBuffer();
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
       versionId: resp.headers.get("x-amz-version-id") ?? undefined,
