@@ -50,6 +50,7 @@ Deno.test({
   name: "get object success",
   async fn() {
     const res = await bucket.getObject("test");
+    assert(res);
     assertEquals(decoder.decode(res.body), "Test1");
     assertEquals(res.etag, "e1b849f9631ffc1829b2e31402373e3c");
     assertEquals(res.contentType, "text/plain");
