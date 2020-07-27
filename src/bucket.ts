@@ -72,7 +72,7 @@ export class S3Bucket {
   async getObject(
     key: string,
     options?: GetObjectOptions,
-  ): Promise<GetObjectResponse> {
+  ): Promise<GetObjectResponse | undefined> {
     const params: Params = {};
     const headers: Params = {};
     if (options?.ifMatch) headers["If-Match"] = options.ifMatch;
@@ -109,6 +109,7 @@ export class S3Bucket {
     }
 
     const res = await this._doRequest(key, params, "GET", headers);
+    if (res.status === 404) return undefined;
     if (res.status !== 200) {
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
