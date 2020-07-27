@@ -64,11 +64,7 @@ Deno.test({
 Deno.test({
   name: "get object not found",
   async fn() {
-    await assertThrowsAsync(
-      () => bucket.getObject("test2"),
-      S3Error,
-      "404 Not Found",
-    );
+    assertEquals(await bucket.getObject("test2"), undefined);
   },
 });
 
@@ -80,10 +76,6 @@ Deno.test({
       await bucket.deleteObject("test"),
       { deleteMarker: false, versionID: undefined },
     );
-    await assertThrowsAsync(
-      () => bucket.getObject("test"),
-      S3Error,
-      "404 Not Found",
-    );
+    assertEquals(await bucket.getObject("test"), undefined);
   },
 });
