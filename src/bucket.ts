@@ -1,4 +1,4 @@
-import { AWSSignerV4, sha256 } from "../deps.ts";
+import { AWSSignerV4, sha256Hex } from "../deps.ts";
 import { S3Config } from "./client.ts";
 import type {
   GetObjectOptions,
@@ -13,6 +13,7 @@ import type {
   CopyObjectOptions,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
+import { sha256 } from "https://raw.githubusercontent.com/chiefbiiko/sha256/v1.0.2/mod.ts";
 
 interface Params {
   [key: string]: string;
@@ -37,7 +38,7 @@ export class S3Bucket {
       : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
-  private _doRequest(
+  private async _doRequest(
     path: string,
     params: Params,
     method: string,
@@ -48,26 +49,18 @@ export class S3Bucket {
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
-    const signedHeaders = this.#signer.sign(
-      "s3",
-      url.toString(),
-      method,
+    const request = new Request(url.toString(), {
       headers,
-      body,
-    );
-    signedHeaders["x-amz-content-sha256"] = sha256(
-      body ?? "",
-      "utf8",
-      "hex",
-    ) as string;
-    if (body) {
-      signedHeaders["content-length"] = body.length.toFixed(0);
-    }
-    return fetch(url, {
       method,
-      headers: signedHeaders,
       body,
     });
+
+    const signedRequest = await this.#signer.sign("s3", request);
+    signedRequest.headers.set("x-amz-content-sha256", sha256Hex(body ?? ""));
+    if (body) {
+      signedRequest.headers.set("content-length", body.length.toFixed(0));
+    }
+    return fetch(url, signedRequest);
   }
 
   async getObject(
