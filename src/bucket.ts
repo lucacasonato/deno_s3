@@ -13,7 +13,6 @@ import type {
   CopyObjectOptions,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
-import { sha256 } from "https://raw.githubusercontent.com/chiefbiiko/sha256/v1.0.2/mod.ts";
 
 interface Params {
   [key: string]: string;
@@ -60,7 +59,7 @@ export class S3Bucket {
     if (body) {
       signedRequest.headers.set("content-length", body.length.toFixed(0));
     }
-    return fetch(url, signedRequest);
+    return fetch(signedRequest);
   }
 
   async getObject(
