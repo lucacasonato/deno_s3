@@ -8,12 +8,13 @@ on:
 
 jobs:
   test:
-    name: test-${{ matrix.deno-version }}-${{ matrix.unstable && 'unstable' || 'stable' }}
+    name: build-${{ matrix.deno-version == 'nightly' && 'nightly' || 'release' }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno-version: [v1.3.3, nightly]
+        deno-version: [v1.4.0, nightly]
         unstable: [false, true]
+        no-check: [false, true]
     env:
       AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -37,4 +38,4 @@ jobs:
           aws --endpoint-url "http://localhost:9000" s3 mb s3://test
 
       - name: Test
-        run: deno test --allow-net --allow-env ${{ matrix.unstable && '--unstable' || '' }}
+        run: deno test --allow-net --allow-env${{ matrix.unstable && ' --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}

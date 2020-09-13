@@ -1,5 +1,5 @@
 import { AWSSignerV4, sha256Hex } from "../deps.ts";
-import { S3Config } from "./client.ts";
+import type { S3Config } from "./client.ts";
 import type {
   GetObjectOptions,
   PutObjectOptions,
