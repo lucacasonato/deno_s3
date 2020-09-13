@@ -20,9 +20,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     steps:
       - name: Setup Deno environment
-        uses: denolib/setup-deno@v1.3.0
+        uses: denolib/setup-deno@v2.2.0
         with:
-          deno-version: v1.3.3
+          deno-version: ${{ matrix.deno-version }}
 
       - uses: actions/checkout@v2
 
