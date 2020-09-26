@@ -14,7 +14,8 @@ jobs:
       matrix:
         deno-version: [v1.4.2, nightly]
         unstable: [false, true]
-        no-check: [false, true]
+        # FIXME(lucacasonato): temporarially disable no-check testing (see https://github.com/denoland/deno/issues/7709)
+        no-check: [false]
     env:
       AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
