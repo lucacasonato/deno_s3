@@ -216,6 +216,8 @@ export class S3Bucket {
         await resp.text(),
       );
     }
+    // clean up http body
+    await resp.arrayBuffer();
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
       versionId: resp.headers.get("x-amz-version-id") ?? undefined,
@@ -309,6 +311,7 @@ export class S3Bucket {
         await resp.text(),
       );
     }
+    // clean up http body
     await resp.arrayBuffer();
     return {
       etag: JSON.parse(resp.headers.get("etag")!),
@@ -331,6 +334,8 @@ export class S3Bucket {
         await resp.text(),
       );
     }
+    // clean up http body
+    await resp.arrayBuffer();
     return {
       versionID: resp.headers.get("x-amz-version-id") ?? undefined,
       deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
