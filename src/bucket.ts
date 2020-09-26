@@ -1,4 +1,4 @@
-import { AWSSignerV4, sha256Hex } from "../deps.ts";
+import { AWSSignerV4, parseXML, decodeXMLEntities, sha256Hex } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
   GetObjectOptions,
@@ -11,6 +11,10 @@ import type {
   ReplicationStatus,
   StorageClass,
   CopyObjectOptions,
+  ListObjectsOptions,
+  ListObjectsResponse,
+  S3Object,
+  CommonPrefix,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 
@@ -150,6 +154,74 @@ export class S3Bucket {
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
     };
+  }
+
+  async listObjects(
+    options?: ListObjectsOptions,
+  ): Promise<ListObjectsResponse | undefined> {
+    const params: Params = {};
+    const headers: Params = {};
+    if (options?.delimiter) params["Delimiter"] = options.delimiter;
+    if (options?.encodingType) params["Encoding-Type"] = options.encodingType;
+    if (options?.maxKeys) {
+      params["Max-Keys"] = options.maxKeys.toString();
+    }
+    if (options?.prefix) {
+      params["Prefix"] = options.prefix;
+    }
+    if (options?.continuationToken) {
+      params["Continuation-Token"] = options.continuationToken;
+    }
+
+    const res = await this._doRequest("/", params, "GET", headers);
+    if (res.status === 404) {
+      // clean up http body
+      await res.arrayBuffer();
+      return undefined;
+    }
+    if (res.status !== 200) {
+      throw new S3Error(
+        `Failed to get object: ${res.status} ${res.statusText}`,
+        await res.text(),
+      );
+    }
+
+    const xml = await res.text();
+
+    return this.parseListObjectResponseXml(xml);
+  }
+
+  private parseListObjectResponseXml(x: string): ListObjectsResponse {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "ListBucketResult");
+
+    return {
+      isTruncated: extractContent(root, "IsTruncated") === "true" ? true : false,
+      contents: extractField(root, "Contents").children.map<S3Object>((s3obj) => {
+        return {
+          key: extractContent(s3obj, "Key"),
+          lastModified: new Date(extractContent(s3obj, "LastModified")),
+          eTag: extractContent(s3obj, "ETag"),
+          size: parseInt(extractContent(s3obj, "Size")),
+          storageClass: extractContent(s3obj, "StorageClass"),
+          owner: extractContent(s3obj, "Owner"),
+        }
+      }),
+      name: extractContent(root, "Name"),
+      prefix: extractContent(root, "Prefix"),
+      delimiter: extractContent(root, "Delimiter"),
+      maxKeys: parseInt(extractContent(root, "MaxKeys")),
+      commonPrefixes: extractField(root, "CommonPrefixes").children.map<CommonPrefix>((prefix) => {
+        return {
+          prefix: extractContent(prefix, "Prefix"),
+        }
+      }),
+      encodingType: extractContent(root, "EncodingType"),
+      keyCount: parseInt(extractContent(root, "KeyCount")),
+      continuationToken: extractContent(root, "ContinuationToken"),
+      nextContinuationToken: extractContent(root, "NextContinuationToken"),
+      startAfter: new Date(extractContent(root, "StartAfter")),
+    }
   }
 
   async putObject(
@@ -366,4 +438,51 @@ const encoder = new TextEncoder();
 function stringToHex(input: string) {
   return [...encoder.encode(input)].map((s) => "%" + s.toString(16)).join("")
     .toUpperCase();
+}
+
+interface Document {
+  declaration: {
+    attributes: Record<string, unknown>;
+  };
+  root: Xml | undefined;
+}
+
+interface Xml {
+  name: string;
+  attributes: unknown;
+  children: Xml[];
+  content?: string;
+}
+
+function extractRoot(doc: Document, name: string): Xml {
+  if (!doc.root || doc.root.name !== name) {
+    throw new S3Error(
+      `Malformed XML document. Missing ${name} field.`,
+      JSON.stringify(doc, undefined, 2),
+    );
+  }
+  return doc.root;
+}
+
+function extractField(node: Xml, name: string): Xml {
+  const bodyField = node.children.find((node) => node.name === name);
+  if (!bodyField) {
+    throw new S3Error(
+      `Missing ${name} field in ${node.name} node.`,
+      JSON.stringify(node, undefined, 2),
+    );
+  }
+  return bodyField;
+}
+
+function extractContent(node: Xml, name: string): string {
+  const field = extractField(node, name);
+  const content = field.content;
+  if (!content) {
+    throw new S3Error(
+      `Missing content in ${node.name} node.`,
+      JSON.stringify(node, undefined, 2),
+    );
+  }
+  return decodeXMLEntities(content);
 }
