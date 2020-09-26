@@ -1,18 +1,28 @@
-import { AWSSignerV4, sha256Hex } from "../deps.ts";
+import {
+  AWSSignerV4,
+  decodeXMLEntities,
+  parseXML,
+  sha256Hex,
+} from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
-  GetObjectOptions,
-  PutObjectOptions,
-  PutObjectResponse,
+  CommonPrefix,
+  CopyObjectOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
+  GetObjectOptions,
   GetObjectResponse,
+  ListObjectsOptions,
+  ListObjectsResponse,
   LockMode,
+  PutObjectOptions,
+  PutObjectResponse,
   ReplicationStatus,
+  S3Object,
   StorageClass,
-  CopyObjectOptions,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
+import type { Signer } from "../deps.ts";
 
 interface Params {
   [key: string]: string;
@@ -23,8 +33,9 @@ export interface S3BucketConfig extends S3Config {
 }
 
 export class S3Bucket {
-  #signer: AWSSignerV4;
+  #signer: Signer;
   #host: string;
+  #bucket: string;
 
   constructor(config: S3BucketConfig) {
     this.#signer = new AWSSignerV4(config.region, {
@@ -32,9 +43,10 @@ export class S3Bucket {
       awsSecretKey: config.secretKey,
       sessionToken: config.sessionToken,
     });
-    this.#host = config.endpointURL
-      ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
-      : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
+    this.#bucket = config.bucket,
+      this.#host = config.endpointURL
+        ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
+        : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
   private async _doRequest(
@@ -150,6 +162,118 @@ export class S3Bucket {
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
     };
+  }
+
+  async listObjects(
+    options?: ListObjectsOptions,
+  ): Promise<ListObjectsResponse | undefined> {
+    // list-type param has to be first
+    const params: Params = { "list-type": "2" };
+    const headers: Params = {};
+    if (options?.delimiter) params["delimiter"] = options.delimiter;
+    if (options?.encodingType) params["encoding-type"] = options.encodingType;
+    if (options?.maxKeys) {
+      params["max-keys"] = options.maxKeys.toString();
+    }
+    if (options?.prefix) {
+      params["prefix"] = options.prefix;
+    }
+    if (options?.continuationToken) {
+      params["continuation-token"] = options.continuationToken;
+    }
+
+    const res = await this._doRequest(
+      `/`,
+      params,
+      "GET",
+      headers,
+    );
+    if (res.status === 404) {
+      // clean up http body
+      await res.arrayBuffer();
+      return undefined;
+    }
+    if (res.status !== 200) {
+      const text = await res.text();
+      console.log(text);
+      throw new S3Error(
+        `Failed to get object: ${res.status} ${res.statusText}`,
+        text,
+      );
+    }
+
+    const xml = await res.text();
+    return this.parseListObjectResponseXml(xml);
+  }
+
+  private parseListObjectResponseXml(x: string): ListObjectsResponse {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "ListBucketResult");
+
+    let keycount: number | undefined;
+    let content = extractContent(root, "KeyCount");
+    if (content) {
+      keycount = parseInt(content);
+    }
+
+    let maxkeys: number | undefined;
+    content = extractContent(root, "MaxKeys");
+    if (content) {
+      maxkeys = parseInt(content);
+    }
+
+    let startAfter: Date | undefined;
+    content = extractContent(root, "StartAfter");
+    if (content) {
+      startAfter = new Date(content);
+    }
+
+    const parsed = {
+      isTruncated: extractContent(root, "IsTruncated") === "true"
+        ? true
+        : false,
+      contents: root.children.filter((node) => node.name === "Contents").map<
+        S3Object
+      >((s3obj) => {
+        let lastmod: Date | undefined;
+        let content = extractContent(s3obj, "LastModified");
+        if (content) {
+          lastmod = new Date(content);
+        }
+
+        let size: number | undefined;
+        content = extractContent(s3obj, "Size");
+        if (content) {
+          size = parseInt(content);
+        }
+
+        return {
+          key: extractContent(s3obj, "Key"),
+          lastModified: lastmod,
+          eTag: extractContent(s3obj, "ETag"),
+          size: size,
+          storageClass: extractContent(s3obj, "StorageClass"),
+          owner: extractContent(s3obj, "Owner"),
+        };
+      }),
+      name: extractContent(root, "Name"),
+      prefix: extractContent(root, "Prefix"),
+      delimiter: extractContent(root, "Delimiter"),
+      maxKeys: maxkeys,
+      commonPrefixes: extractField(root, "CommonPrefixes")?.children.map<
+        CommonPrefix
+      >((prefix) => {
+        return {
+          prefix: extractContent(prefix, "Prefix"),
+        };
+      }),
+      encodingType: extractContent(root, "EncodingType"),
+      keyCount: keycount,
+      continuationToken: extractContent(root, "ContinuationToken"),
+      nextContinuationToken: extractContent(root, "NextContinuationToken"),
+      startAfter: startAfter,
+    };
+    return parsed;
   }
 
   async putObject(
@@ -366,4 +490,47 @@ const encoder = new TextEncoder();
 function stringToHex(input: string) {
   return [...encoder.encode(input)].map((s) => "%" + s.toString(16)).join("")
     .toUpperCase();
+}
+
+interface Document {
+  declaration: {
+    attributes: Record<string, unknown>;
+  };
+  root: Xml | undefined;
+}
+
+interface Xml {
+  name: string;
+  attributes: unknown;
+  children: Xml[];
+  content?: string;
+}
+
+function extractRoot(doc: Document, name: string): Xml {
+  if (!doc.root || doc.root.name !== name) {
+    throw new S3Error(
+      `Malformed XML document. Missing ${name} field.`,
+      JSON.stringify(doc, undefined, 2),
+    );
+  }
+  return doc.root;
+}
+
+function extractField(
+  node: Xml,
+  name: string,
+): Xml | undefined {
+  return node.children.find((node) => node.name === name);
+}
+
+function extractContent(
+  node: Xml,
+  name: string,
+): string | undefined {
+  const field = extractField(node, name);
+  const content = field?.content;
+  if (content === undefined) {
+    return content;
+  }
+  return decodeXMLEntities(content);
 }
