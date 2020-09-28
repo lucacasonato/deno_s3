@@ -3,6 +3,7 @@ import {
   parseXML,
   decodeXMLEntities,
   sha256Hex,
+  join,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
@@ -43,9 +44,9 @@ export class S3Bucket {
       sessionToken: config.sessionToken,
     });
     this.#bucket = config.bucket,
-    this.#host = config.endpointURL
-      ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
-      : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
+      this.#host = config.endpointURL
+        ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
+        : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
   private async _doRequest(
@@ -55,17 +56,20 @@ export class S3Bucket {
     headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = new URL(encodeURIS3(path), this.#host);
+    const url = new URL(join(this.#host, encodeURIS3(path)));
+    let search = "";
     for (const key in params) {
-      url.searchParams.set(key, params[key]);
+      search = `${key}=${params[key]}&`;
+    }
+    search = search.slice(0, search.length);
+    if (search) {
+      url.search = search;
     }
     const request = new Request(url.toString(), {
       headers,
       method,
       body,
     });
-
-    console.log(request.url);
 
     const signedRequest = await this.#signer.sign("s3", request);
     signedRequest.headers.set("x-amz-content-sha256", sha256Hex(body ?? ""));

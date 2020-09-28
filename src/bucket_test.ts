@@ -50,7 +50,9 @@ Deno.test({
     );
 
     // teardown
-    await bucket.deleteObject("dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md");
+    await bucket.deleteObject(
+      "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
+    );
   },
 });
 
@@ -72,7 +74,11 @@ Deno.test({
   name: "get object success",
   async fn() {
     // setup
-    await bucket.putObject("test", encoder.encode("Test1"), { contentType: "text/plain" });
+    await bucket.putObject(
+      "test",
+      encoder.encode("Test1"),
+      { contentType: "text/plain" },
+    );
 
     const res = await bucket.getObject("test");
     assert(res);
@@ -154,7 +160,7 @@ Deno.test({
 
     try {
       for (let k of keys) {
-        await bucket.putObject(k, content, { contentType: "text/plain"});
+        await bucket.putObject(k, content, { contentType: "text/plain" });
       }
 
       const res = await bucket.listObjects();
@@ -170,7 +176,9 @@ Deno.test({
       assertEquals(res3?.keyCount, 3);
       assert(res3?.nextContinuationToken);
 
-      const next = await bucket.listObjects({ maxKeys: 3, continuationToken: res?.nextContinuationToken });
+      const next = await bucket.listObjects(
+        { maxKeys: 3, continuationToken: res?.nextContinuationToken },
+      );
       console.log(next);
       assert(next);
       assertEquals(next?.isTruncated, true);
@@ -179,7 +187,9 @@ Deno.test({
       assert(next?.continuationToken);
       assert(next?.nextContinuationToken);
 
-      const last = await bucket.listObjects({ continuationToken: next?.nextContinuationToken });
+      const last = await bucket.listObjects(
+        { continuationToken: next?.nextContinuationToken },
+      );
       assert(last);
       assertEquals(last?.isTruncated, false);
       // assertEquals(last?.maxKeys, 1000);
