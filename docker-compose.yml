@@ -9,10 +9,3 @@ services:
       MINIO_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     ports:
       - "9000:9000"
-  tests:
-    build: .
-    links:
-      - minio
-    environment:
-      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
-      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY

@@ -33,5 +33,11 @@ jobs:
       - name: Lint
         run: deno lint --unstable
 
+      - name: Setup Tests
+        run: docker-compose up -d
+
       - name: Test
-        run: docker-compose up --build --abort-on-container-exit
+        run: make test
+
+      - name: Cleanup
+        run: make cleanup
