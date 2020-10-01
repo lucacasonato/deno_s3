@@ -43,10 +43,10 @@ export class S3Bucket {
       awsSecretKey: config.secretKey,
       sessionToken: config.sessionToken,
     });
-    this.#bucket = config.bucket,
-      this.#host = config.endpointURL
-        ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
-        : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
+    this.#bucket = config.bucket;
+    this.#host = config.endpointURL
+      ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
+      : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
   private async _doRequest(
