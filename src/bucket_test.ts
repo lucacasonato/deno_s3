@@ -221,3 +221,33 @@ Deno.test({
     }
   },
 });
+
+Deno.test({
+  name: "empty bucket",
+  ignore: true,
+  async fn() {
+    // setup
+    const content = encoder.encode("Test1");
+    const keys = [
+      "fooz",
+      "bar",
+      "foo/sub2",
+      "foo/sub3/subsub",
+      "baz",
+      "fruits/blueberry",
+      "fruits/banana",
+      "fruits/strawberry",
+      "fruits/apple",
+      "fruits/orange",
+    ];
+
+    for (let k of keys) {
+      await bucket.putObject(k, content, { contentType: "text/plain" });
+    }
+
+    const deleted = await bucket.empty();
+    deleted.sort();
+    keys.sort();
+    assertEquals(deleted, keys);
+  },
+});
