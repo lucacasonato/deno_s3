@@ -33,8 +33,6 @@ export interface S3BucketConfig extends S3Config {
   bucket: string;
 }
 
-export type DeletedKeys = string[];
-
 export class S3Bucket {
   #signer: Signer;
   #host: string;
@@ -489,8 +487,11 @@ export class S3Bucket {
     };
   }
 
-  async empty(): Promise<DeletedKeys> {
-    const deleted: DeletedKeys = [];
+  /**
+   * Deletes all objects in the bucket recursively. Returns a list of deleted keys.
+   */
+  async empty(): Promise<string[]> {
+    const deleted: string[] = [];
     let ls: ListObjectsResponse | undefined;
     do {
       ls = await this.listObjects({
@@ -504,9 +505,9 @@ export class S3Bucket {
     return deleted;
   }
 
-  private async deleteMany(objects: S3Object[]): Promise<DeletedKeys> {
+  private async deleteMany(objects: S3Object[]): Promise<string[]> {
     const p: Promise<DeleteObjectResponse>[] = [];
-    const deleted: DeletedKeys = [];
+    const deleted: string[] = [];
     objects.forEach((o) => {
       if (o.key) {
         p.push(
