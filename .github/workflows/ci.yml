@@ -37,7 +37,7 @@ jobs:
         run: docker-compose up -d
 
       - name: Test
-        run: make test
+        run: make test DENO_ARGS="${{ matrix.unstable && ' --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}"
 
       - name: Cleanup
         run: make cleanup

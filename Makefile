@@ -10,7 +10,7 @@ test:
 	aws --endpoint-url=http://localhost:9000 s3 rb s3://test || true
 	aws --endpoint-url=http://localhost:9000 s3 mb s3://test
 
-	deno test -A --unstable
+	deno test -A ${DENO_ARGS}
 
 cleanup:
 	docker-compose down
