@@ -33,10 +33,11 @@ jobs:
       - name: Lint
         run: deno lint --unstable
 
-      - name: Start minio
-        run: |
-          docker-compose up -d
-          aws --endpoint-url "http://localhost:9000" s3 mb s3://test
+      - name: Setup Tests
+        run: docker-compose up -d
 
       - name: Test
-        run: deno test --allow-net --allow-env${{ matrix.unstable && ' --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}
+        run: make test DENO_ARGS="${{ matrix.unstable && ' --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}"
+
+      - name: Cleanup
+        run: make cleanup

@@ -1,11 +1,13 @@
 export * from "./src/bucket.ts";
 export type {
-  GetObjectOptions,
-  GetObjectResponse,
-  PutObjectOptions,
-  PutObjectResponse,
   CopyObjectOptions,
   CopyObjectResponse,
   DeleteObjectOptions,
   DeleteObjectResponse,
+  GetObjectOptions,
+  GetObjectResponse,
+  ListObjectsOptions,
+  ListObjectsResponse,
+  PutObjectOptions,
+  PutObjectResponse,
 } from "./src/types.ts";
