@@ -33,6 +33,8 @@ export interface S3BucketConfig extends S3Config {
   bucket: string;
 }
 
+export type DeletedKeys = string[];
+
 export class S3Bucket {
   #signer: Signer;
   #host: string;
@@ -485,6 +487,39 @@ export class S3Bucket {
       versionID: resp.headers.get("x-amz-version-id") ?? undefined,
       deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
     };
+  }
+
+  async empty(): Promise<DeletedKeys> {
+    const deleted: DeletedKeys = [];
+    let ls: ListObjectsResponse | undefined;
+    do {
+      ls = await this.listObjects({
+        maxKeys: 20,
+        continuationToken: ls?.nextContinuationToken,
+      });
+
+      const d = await this.deleteMany(ls?.contents ?? []);
+      deleted.push(...d);
+    } while (ls?.nextContinuationToken);
+    return deleted;
+  }
+
+  private async deleteMany(objects: S3Object[]): Promise<DeletedKeys> {
+    const p: Promise<DeleteObjectResponse>[] = [];
+    const deleted: DeletedKeys = [];
+    objects.forEach((o) => {
+      if (o.key) {
+        p.push(
+          this.deleteObject(o.key).then((res) => {
+            deleted.push(o.key as string);
+            return res;
+          }),
+        );
+      }
+    });
+
+    await Promise.all(p);
+    return deleted;
   }
 }
 
