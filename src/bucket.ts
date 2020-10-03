@@ -2,6 +2,7 @@ import {
   AWSSignerV4,
   decodeXMLEntities,
   parseXML,
+  pooledMap,
   sha256Hex,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
@@ -495,7 +496,7 @@ export class S3Bucket {
     let ls: ListObjectsResponse | undefined;
     do {
       ls = await this.listObjects({
-        maxKeys: 20,
+        maxKeys: 20, // max keys is used as the pool size in the deleteMany function.
         continuationToken: ls?.nextContinuationToken,
       });
 
@@ -506,20 +507,19 @@ export class S3Bucket {
   }
 
   private async deleteMany(objects: S3Object[]): Promise<string[]> {
-    const p: Promise<DeleteObjectResponse>[] = [];
     const deleted: string[] = [];
-    objects.forEach((o) => {
-      if (o.key) {
-        p.push(
-          this.deleteObject(o.key).then((res) => {
-            deleted.push(o.key as string);
-            return res;
-          }),
-        );
-      }
-    });
-
-    await Promise.all(p);
+    for await (
+      let k of pooledMap(
+        objects.length,
+        objects.filter((o) => o.key),
+        async (o) => {
+          await this.deleteObject(o.key as string);
+          return o.key as string;
+        },
+      )
+    ) {
+      deleted.push(k);
+    }
     return deleted;
   }
 }
