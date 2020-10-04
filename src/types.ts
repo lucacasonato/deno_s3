@@ -298,6 +298,13 @@ export interface ListObjectsOptions {
   // ExpectedBucketOwner?: AccountId;
 }
 
+export type ListAllObjectsOptions =
+  & Omit<Omit<ListObjectsOptions, "maxKeys">, "continuationToken">
+  & {
+    /** The batch size for each listObjects request. */
+    batchSize: number;
+  };
+
 export interface PutObjectOptions {
   acl?:
     | "private"
