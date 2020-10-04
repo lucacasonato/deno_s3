@@ -2,6 +2,7 @@ import {
   AWSSignerV4,
   decodeXMLEntities,
   parseXML,
+  pooledMap,
   sha256Hex,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
@@ -485,6 +486,28 @@ export class S3Bucket {
       versionID: resp.headers.get("x-amz-version-id") ?? undefined,
       deleteMarker: resp.headers.get("x-amz-delete-marker") === "true",
     };
+  }
+
+  /**
+   * Deletes all objects in the bucket recursively. Returns a list of deleted keys.
+   */
+  async empty(): Promise<string[]> {
+    const deleted: string[] = [];
+    for await (
+      let k of pooledMap(
+        50,
+        this.listAllObjects({ batchSize: 1000 }),
+        async (o) => {
+          if (o.key) {
+            await this.deleteObject(o.key!);
+            return o.key!;
+          }
+        },
+      )
+    ) {
+      deleted.push(k!);
+    }
+    return deleted;
   }
 }
 
