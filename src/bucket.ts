@@ -12,6 +12,7 @@ import type {
   DeleteObjectResponse,
   GetObjectOptions,
   GetObjectResponse,
+  ListAllObjectsOptions,
   ListObjectsOptions,
   ListObjectsResponse,
   LockMode,
@@ -56,7 +57,9 @@ export class S3Bucket {
     headers: Params,
     body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url = new URL(encodeURIS3(path), this.#host);
+    const url = path == "/"
+      ? new URL(this.#host)
+      : new URL(encodeURIS3(path), this.#host);
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
@@ -274,6 +277,24 @@ export class S3Bucket {
       startAfter: startAfter,
     };
     return parsed;
+  }
+
+  async *listAllObjects(
+    options: ListAllObjectsOptions,
+  ): AsyncGenerator<S3Object> {
+    let ls: ListObjectsResponse | undefined;
+    do {
+      ls = await this.listObjects({
+        ...options,
+        maxKeys: options.batchSize,
+        continuationToken: ls?.nextContinuationToken,
+      });
+      if (ls?.contents) {
+        for (const object of ls.contents) {
+          yield object;
+        }
+      }
+    } while (ls?.nextContinuationToken);
   }
 
   async putObject(

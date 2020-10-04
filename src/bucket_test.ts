@@ -142,7 +142,6 @@ Deno.test({
 
 Deno.test({
   name: "list objects",
-  ignore: true,
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -178,13 +177,12 @@ Deno.test({
       assert(res3?.nextContinuationToken);
 
       const next = await bucket.listObjects(
-        { maxKeys: 3, continuationToken: res?.nextContinuationToken },
+        { maxKeys: 3, continuationToken: res3?.nextContinuationToken },
       );
       assert(next);
       assertEquals(next?.isTruncated, true);
       assertEquals(next?.maxKeys, 3);
       assertEquals(next?.keyCount, 3);
-      // assert(next?.continuationToken);
       assert(next?.nextContinuationToken);
 
       const last = await bucket.listObjects(
@@ -196,6 +194,25 @@ Deno.test({
       assertEquals(last?.keyCount, 4);
       // assert(last?.continuationToken);
       assertEquals(last?.nextContinuationToken, undefined);
+
+      const res4 = bucket.listAllObjects({ batchSize: 3 });
+      assert(last);
+      const res4Keys = [];
+      for await (const object of res4) {
+        res4Keys.push(object.key);
+      }
+      assertEquals(res4Keys, [
+        "bar",
+        "baz",
+        "foo/sub2",
+        "foo/sub3/subsub",
+        "fooz",
+        "fruits/apple",
+        "fruits/banana",
+        "fruits/blueberry",
+        "fruits/orange",
+        "fruits/strawberry",
+      ]);
     } finally {
       // teardown
       for (let k of keys) {
