@@ -224,7 +224,6 @@ Deno.test({
 
 Deno.test({
   name: "empty bucket",
-  ignore: true,
   async fn() {
     // setup
     const content = encoder.encode("Test1");

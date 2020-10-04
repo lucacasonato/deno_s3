@@ -493,32 +493,19 @@ export class S3Bucket {
    */
   async empty(): Promise<string[]> {
     const deleted: string[] = [];
-    let ls: ListObjectsResponse | undefined;
-    do {
-      ls = await this.listObjects({
-        maxKeys: 20, // max keys is used as the pool size in the deleteMany function.
-        continuationToken: ls?.nextContinuationToken,
-      });
-
-      const d = await this.deleteMany(ls?.contents ?? []);
-      deleted.push(...d);
-    } while (ls?.nextContinuationToken);
-    return deleted;
-  }
-
-  private async deleteMany(objects: S3Object[]): Promise<string[]> {
-    const deleted: string[] = [];
     for await (
       let k of pooledMap(
-        objects.length,
-        objects.filter((o) => o.key),
+        50,
+        this.listAllObjects({ batchSize: 1000 }),
         async (o) => {
-          await this.deleteObject(o.key as string);
-          return o.key as string;
+          if (o.key) {
+            await this.deleteObject(o.key!);
+            return o.key!;
+          }
         },
       )
     ) {
-      deleted.push(k);
+      deleted.push(k!);
     }
     return deleted;
   }
