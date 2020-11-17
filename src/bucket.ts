@@ -48,9 +48,9 @@ export class S3Bucket {
     this.#bucket = config.bucket;
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
-      : config.bucket.indexOf(".") >=0
-        ? `https://s3.${config.region}.amazonaws.com/${config.bucket}/`
-        : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
+      : config.bucket.indexOf(".") >= 0
+      ? `https://s3.${config.region}.amazonaws.com/${config.bucket}/`
+      : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
   private async _doRequest(
