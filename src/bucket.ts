@@ -496,7 +496,7 @@ export class S3Bucket {
   async empty(): Promise<string[]> {
     const deleted: string[] = [];
     for await (
-      let k of pooledMap(
+      const k of pooledMap(
         50,
         this.listAllObjects({ batchSize: 1000 }),
         async (o) => {

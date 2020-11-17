@@ -159,7 +159,7 @@ Deno.test({
     ];
 
     try {
-      for (let k of keys) {
+      for (const k of keys) {
         await bucket.putObject(k, content, { contentType: "text/plain" });
       }
 
@@ -215,7 +215,7 @@ Deno.test({
       ]);
     } finally {
       // teardown
-      for (let k of keys) {
+      for (const k of keys) {
         await bucket.deleteObject(k);
       }
     }
@@ -240,7 +240,7 @@ Deno.test({
       "fruits/orange",
     ];
 
-    for (let k of keys) {
+    for (const k of keys) {
       await bucket.putObject(k, content, { contentType: "text/plain" });
     }
 
