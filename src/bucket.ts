@@ -48,6 +48,8 @@ export class S3Bucket {
     this.#bucket = config.bucket;
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
+      : config.bucket.indexOf(".") >= 0
+      ? `https://s3.${config.region}.amazonaws.com/${config.bucket}/`
       : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
   }
 
@@ -494,7 +496,7 @@ export class S3Bucket {
   async empty(): Promise<string[]> {
     const deleted: string[] = [];
     for await (
-      let k of pooledMap(
+      const k of pooledMap(
         50,
         this.listAllObjects({ batchSize: 1000 }),
         async (o) => {

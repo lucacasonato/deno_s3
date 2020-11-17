@@ -12,16 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno-version: [v1.4.2, nightly]
+        deno-version: [v1.x, nightly]
         unstable: [false, true]
-        # FIXME(lucacasonato): temporarially disable no-check testing (see https://github.com/denoland/deno/issues/7709)
-        no-check: [false]
+        no-check: [false, true]
     env:
       AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     steps:
       - name: Setup Deno environment
-        uses: denolib/setup-deno@v2.2.0
+        uses: denolib/setup-deno@v2.3.0
         with:
           deno-version: ${{ matrix.deno-version }}
 
