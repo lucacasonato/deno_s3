@@ -106,10 +106,7 @@ export interface GetObjectOptions {
   // TODO: range
 }
 
-export interface GetObjectResponse {
-  /** The body of this object. */
-  body: Uint8Array;
-
+export interface HeadObjectResponse {
   /** Specifies caching behavior along the request/reply chain. */
   cacheControl?: string;
 
@@ -205,6 +202,11 @@ export interface GetObjectResponse {
   // TODO: Content-Range
   // TODO: x-amz-expiration
   // TODO: x-amz-restore
+}
+
+export interface GetObjectResponse extends HeadObjectResponse {
+  /** The body of this object. */
+  body: Uint8Array;
 }
 
 export interface ListObjectsResponse {
