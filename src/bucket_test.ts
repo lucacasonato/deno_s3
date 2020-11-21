@@ -71,6 +71,37 @@ Deno.test({
 });
 
 Deno.test({
+  name: "head object success",
+  async fn() {
+    // setup
+    await bucket.putObject(
+      "test",
+      encoder.encode("Test1"),
+      { contentType: "text/plain" },
+    );
+
+    const head = await bucket.headObject("test");
+    assert(head);
+    assertEquals(head?.etag, "e1b849f9631ffc1829b2e31402373e3c");
+    assertEquals(head?.contentType, "text/plain");
+    assertEquals(head?.contentLength, 5);
+    assertEquals(head?.storageClass, "STANDARD");
+    assertEquals(head?.deleteMarker, false);
+    assert(new Date() >= (head?.lastModified ?? new Date(0)));
+
+    // teardown
+    await bucket.deleteObject("test");
+  },
+});
+
+Deno.test({
+  name: "head object not found",
+  async fn() {
+    assertEquals(await bucket.headObject("test2"), undefined);
+  },
+});
+
+Deno.test({
   name: "get object success",
   async fn() {
     // setup
