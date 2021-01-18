@@ -390,7 +390,7 @@ export interface PutObjectOptions {
    * User-defined object metadata passed as a number of key-value pairs
    * that are converted into `x-amz-meta-` prefixed key headers.
    */
-  meta?: Record<string, string>;
+  meta: Record<string, string>;
 }
 
 export interface PutObjectResponse {

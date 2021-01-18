@@ -273,7 +273,7 @@ export class S3Bucket {
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
-      meta: Object.keys(meta).length !== 0 ? meta : undefined,
+      meta: Object.keys(meta).length !== 0 ? meta : {},
     };
   }
 
