@@ -141,6 +141,13 @@ export class S3Bucket {
     const partsCount = res.headers.get("x-amz-mp-parts-count");
     const legalHold = res.headers.get("x-amz-object-lock-legal-hold");
 
+    const meta: Record<string, string> = {};
+    for (const [key, value] of res.headers) {
+      if (key.startsWith("x-amz-meta-")) {
+        meta[key.slice("x-amz-meta-".length)] = value;
+      }
+    }
+
     return {
       contentLength: parseInt(res.headers.get("Content-Length")!),
       deleteMarker: res.headers.get("x-amz-delete-marker") === "true",
@@ -168,6 +175,7 @@ export class S3Bucket {
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
+      meta,
     };
   }
 
@@ -230,6 +238,13 @@ export class S3Bucket {
     const partsCount = res.headers.get("x-amz-mp-parts-count");
     const legalHold = res.headers.get("x-amz-object-lock-legal-hold");
 
+    const meta: Record<string, string> = {};
+    for (const [key, value] of res.headers) {
+      if (key.startsWith("x-amz-meta-")) {
+        meta[key.slice("x-amz-meta-".length)] = value;
+      }
+    }
+
     return {
       body: new Uint8Array(await res.arrayBuffer()),
       contentLength: parseInt(res.headers.get("Content-Length")!),
@@ -258,6 +273,7 @@ export class S3Bucket {
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
+      meta,
     };
   }
 
@@ -440,6 +456,11 @@ export class S3Bucket {
       headers["x-amz-object-lock-legal-hold"] = options.legalHold
         ? "ON"
         : "OFF";
+    }
+    if (options?.meta) {
+      for (const [key, value] of Object.entries(options.meta)) {
+        headers[`x-amz-meta-${key}`] = value;
+      }
     }
 
     const resp = await this._doRequest(

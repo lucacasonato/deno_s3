@@ -198,6 +198,12 @@ export interface HeadObjectResponse {
    */
   websiteRedirectLocation?: string;
 
+  /**
+   * The user-defined metadata of this object as a number of key-value pairs
+   * with the prefixed `x-amz-meta-` stripped from the key
+   */
+  meta: Record<string, string>;
+
   // TODO: accept-ranges
   // TODO: Content-Range
   // TODO: x-amz-expiration
@@ -259,6 +265,7 @@ export interface ListObjectsResponse {
    */
   startAfter?: Date;
 }
+
 export interface ListObjectsOptions {
   /**
    * A delimiter is a character you use to group keys.
@@ -378,6 +385,12 @@ export interface PutObjectOptions {
    * Amazon S3 stores the value of this header in the object metadata.
    */
   websiteRedirectLocation?: string;
+
+  /**
+   * User-defined object metadata passed as a number of key-value pairs
+   * that are converted into `x-amz-meta-` prefixed key headers.
+   */
+  meta?: Record<string, string>;
 }
 
 export interface PutObjectResponse {
