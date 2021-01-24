@@ -137,7 +137,9 @@ Deno.test({
     // setup
     await bucket.putObject("test", encoder.encode("test"));
 
-    assert(await bucket.getObject("test"));
+    const res = await bucket.getObject("test");
+    assert(res);
+    await res.body.cancel();
     assertEquals(await bucket.deleteObject("test"), {
       deleteMarker: false,
       versionID: undefined,
@@ -158,6 +160,7 @@ Deno.test({
       .catch((e) => console.log(e.response));
     const res = await bucket.getObject("test4");
     assert(res);
+    await res.body.cancel();
     assertEquals(res?.contentType, "text/plain");
     assertEquals(res?.contentLength, 5);
     assertEquals(res?.contentType, "text/plain");
