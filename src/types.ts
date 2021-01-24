@@ -212,7 +212,7 @@ export interface HeadObjectResponse {
 
 export interface GetObjectResponse extends HeadObjectResponse {
   /** The body of this object. */
-  body: Uint8Array;
+  body: ReadableStream<Uint8Array>;
 }
 
 export interface ListObjectsResponse {
