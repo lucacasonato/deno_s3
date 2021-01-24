@@ -10,16 +10,13 @@ const bucket = new S3Bucket({
 });
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 
 Deno.test({
   name: "put object",
   async fn() {
-    const res = await bucket.putObject(
-      "test",
-      encoder.encode("Test1"),
-      { contentType: "text/plain" },
-    );
+    const res = await bucket.putObject("test", encoder.encode("Test1"), {
+      contentType: "text/plain",
+    });
 
     // teardown
     await bucket.deleteObject("test");
@@ -74,11 +71,10 @@ Deno.test({
   name: "head object success",
   async fn() {
     // setup
-    await bucket.putObject(
-      "test",
-      encoder.encode("Test1"),
-      { contentType: "text/plain", meta: { foo: "bar", baz: "qux" } },
-    );
+    await bucket.putObject("test", encoder.encode("Test1"), {
+      contentType: "text/plain",
+      meta: { foo: "bar", baz: "qux" },
+    });
 
     const head = await bucket.headObject("test");
     assert(head);
@@ -106,15 +102,15 @@ Deno.test({
   name: "get object success",
   async fn() {
     // setup
-    await bucket.putObject(
-      "test",
-      encoder.encode("Test1"),
-      { contentType: "text/plain", meta: { foo: "bar", baz: "qux" } },
-    );
+    await bucket.putObject("test", encoder.encode("Test1"), {
+      contentType: "text/plain",
+      meta: { foo: "bar", baz: "qux" },
+    });
 
     const res = await bucket.getObject("test");
     assert(res);
-    assertEquals(decoder.decode(res?.body), "Test1");
+    const body = await new Response(res.body).text();
+    assertEquals(body, "Test1");
     assertEquals(res?.etag, "e1b849f9631ffc1829b2e31402373e3c");
     assertEquals(res?.contentType, "text/plain");
     assertEquals(res?.meta, { foo: "bar", baz: "qux" });
@@ -141,11 +137,13 @@ Deno.test({
     // setup
     await bucket.putObject("test", encoder.encode("test"));
 
-    assert(await bucket.getObject("test"));
-    assertEquals(
-      await bucket.deleteObject("test"),
-      { deleteMarker: false, versionID: undefined },
-    );
+    const res = await bucket.getObject("test");
+    assert(res);
+    await res.body.cancel();
+    assertEquals(await bucket.deleteObject("test"), {
+      deleteMarker: false,
+      versionID: undefined,
+    });
     assertEquals(await bucket.getObject("test"), undefined);
   },
 });
@@ -153,16 +151,16 @@ Deno.test({
 Deno.test({
   name: "copy object",
   async fn() {
-    await bucket.putObject(
-      "test3",
-      encoder.encode("Test1"),
-    );
-    await bucket.copyObject("test3", "test4", {
-      contentType: "text/plain",
-      metadataDirective: "REPLACE",
-    }).catch((e) => console.log(e.response));
+    await bucket.putObject("test3", encoder.encode("Test1"));
+    await bucket
+      .copyObject("test3", "test4", {
+        contentType: "text/plain",
+        metadataDirective: "REPLACE",
+      })
+      .catch((e) => console.log(e.response));
     const res = await bucket.getObject("test4");
     assert(res);
+    await res.body.cancel();
     assertEquals(res?.contentType, "text/plain");
     assertEquals(res?.contentLength, 5);
     assertEquals(res?.contentType, "text/plain");
@@ -209,18 +207,19 @@ Deno.test({
       assertEquals(res3?.keyCount, 3);
       assert(res3?.nextContinuationToken);
 
-      const next = await bucket.listObjects(
-        { maxKeys: 3, continuationToken: res3?.nextContinuationToken },
-      );
+      const next = await bucket.listObjects({
+        maxKeys: 3,
+        continuationToken: res3?.nextContinuationToken,
+      });
       assert(next);
       assertEquals(next?.isTruncated, true);
       assertEquals(next?.maxKeys, 3);
       assertEquals(next?.keyCount, 3);
       assert(next?.nextContinuationToken);
 
-      const last = await bucket.listObjects(
-        { continuationToken: next?.nextContinuationToken },
-      );
+      const last = await bucket.listObjects({
+        continuationToken: next?.nextContinuationToken,
+      });
       assert(last);
       assertEquals(last?.isTruncated, false);
       // assertEquals(last?.maxKeys, 1000);

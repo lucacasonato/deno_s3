@@ -154,7 +154,7 @@ export class S3Bucket {
       etag: JSON.parse(res.headers.get("etag")!),
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
-      storageClass: res.headers.get("x-amz-storage-class") as StorageClass ??
+      storageClass: (res.headers.get("x-amz-storage-class") as StorageClass) ??
         "STANDARD",
       taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
 
@@ -164,13 +164,13 @@ export class S3Bucket {
       contentLanguage: res.headers.get("Content-Language") ?? undefined,
       contentType: res.headers.get("Content-Type") ?? undefined,
       expires: expires ? new Date(expires) : undefined,
-      legalHold: legalHold ? true : (legalHold === "OFF" ? false : undefined),
-      lockMode: res.headers.get("x-amz-object-lock-mode") as LockMode ??
+      legalHold: legalHold ? true : legalHold === "OFF" ? false : undefined,
+      lockMode: (res.headers.get("x-amz-object-lock-mode") as LockMode) ??
         undefined,
       lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
       replicationStatus:
-        res.headers.get("x-amz-replication-status") as ReplicationStatus ??
+        (res.headers.get("x-amz-replication-status") as ReplicationStatus) ??
           undefined,
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
@@ -245,14 +245,18 @@ export class S3Bucket {
       }
     }
 
+    if (res.body == null) {
+      throw new S3Error("S3 did not return a body for a getObject call.", "");
+    }
+
     return {
-      body: new Uint8Array(await res.arrayBuffer()),
+      body: res.body,
       contentLength: parseInt(res.headers.get("Content-Length")!),
       deleteMarker: res.headers.get("x-amz-delete-marker") === "true",
       etag: JSON.parse(res.headers.get("etag")!),
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
-      storageClass: res.headers.get("x-amz-storage-class") as StorageClass ??
+      storageClass: (res.headers.get("x-amz-storage-class") as StorageClass) ??
         "STANDARD",
       taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
 
@@ -262,13 +266,13 @@ export class S3Bucket {
       contentLanguage: res.headers.get("Content-Language") ?? undefined,
       contentType: res.headers.get("Content-Type") ?? undefined,
       expires: expires ? new Date(expires) : undefined,
-      legalHold: legalHold ? true : (legalHold === "OFF" ? false : undefined),
-      lockMode: res.headers.get("x-amz-object-lock-mode") as LockMode ??
+      legalHold: legalHold ? true : legalHold === "OFF" ? false : undefined,
+      lockMode: (res.headers.get("x-amz-object-lock-mode") as LockMode) ??
         undefined,
       lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
       replicationStatus:
-        res.headers.get("x-amz-replication-status") as ReplicationStatus ??
+        (res.headers.get("x-amz-replication-status") as ReplicationStatus) ??
           undefined,
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
@@ -295,12 +299,7 @@ export class S3Bucket {
       params["continuation-token"] = options.continuationToken;
     }
 
-    const res = await this._doRequest(
-      `/`,
-      params,
-      "GET",
-      headers,
-    );
+    const res = await this._doRequest(`/`, params, "GET", headers);
     if (res.status === 404) {
       // clean up http body
       await res.arrayBuffer();
@@ -345,37 +344,38 @@ export class S3Bucket {
       isTruncated: extractContent(root, "IsTruncated") === "true"
         ? true
         : false,
-      contents: root.children.filter((node) => node.name === "Contents").map<
-        S3Object
-      >((s3obj) => {
-        let lastmod: Date | undefined;
-        let content = extractContent(s3obj, "LastModified");
-        if (content) {
-          lastmod = new Date(content);
-        }
+      contents: root.children
+        .filter((node) => node.name === "Contents")
+        .map<S3Object>((s3obj) => {
+          let lastmod: Date | undefined;
+          let content = extractContent(s3obj, "LastModified");
+          if (content) {
+            lastmod = new Date(content);
+          }
 
-        let size: number | undefined;
-        content = extractContent(s3obj, "Size");
-        if (content) {
-          size = parseInt(content);
-        }
+          let size: number | undefined;
+          content = extractContent(s3obj, "Size");
+          if (content) {
+            size = parseInt(content);
+          }
 
-        return {
-          key: extractContent(s3obj, "Key"),
-          lastModified: lastmod,
-          eTag: extractContent(s3obj, "ETag"),
-          size: size,
-          storageClass: extractContent(s3obj, "StorageClass"),
-          owner: extractContent(s3obj, "Owner"),
-        };
-      }),
+          return {
+            key: extractContent(s3obj, "Key"),
+            lastModified: lastmod,
+            eTag: extractContent(s3obj, "ETag"),
+            size: size,
+            storageClass: extractContent(s3obj, "StorageClass"),
+            owner: extractContent(s3obj, "Owner"),
+          };
+        }),
       name: extractContent(root, "Name"),
       prefix: extractContent(root, "Prefix"),
       delimiter: extractContent(root, "Delimiter"),
       maxKeys: maxkeys,
-      commonPrefixes: extractField(root, "CommonPrefixes")?.children.map<
-        CommonPrefix
-      >((prefix) => {
+      commonPrefixes: extractField(
+        root,
+        "CommonPrefixes",
+      )?.children.map<CommonPrefix>((prefix) => {
         return {
           prefix: extractContent(prefix, "Prefix"),
         };
@@ -449,8 +449,9 @@ export class S3Bucket {
     }
     if (options?.lockMode) headers["x-amz-object-lock-mode"] = options.lockMode;
     if (options?.lockRetainUntil) {
-      headers["x-amz-object-lock-retain-until-date"] = options.lockRetainUntil
-        .toString();
+      headers[
+        "x-amz-object-lock-retain-until-date"
+      ] = options.lockRetainUntil.toString();
     }
     if (options?.legalHold) {
       headers["x-amz-object-lock-legal-hold"] = options.legalHold
@@ -463,13 +464,7 @@ export class S3Bucket {
       }
     }
 
-    const resp = await this._doRequest(
-      key,
-      {},
-      "PUT",
-      headers,
-      body,
-    );
+    const resp = await this._doRequest(key, {}, "PUT", headers, body);
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
@@ -490,8 +485,10 @@ export class S3Bucket {
     options?: CopyObjectOptions,
   ): Promise<PutObjectResponse> {
     const headers: Params = {};
-    headers["x-amz-copy-source"] = new URL(encodeURIS3(source), this.#host)
-      .toString();
+    headers["x-amz-copy-source"] = new URL(
+      encodeURIS3(source),
+      this.#host,
+    ).toString();
     if (options?.acl) headers["x-amz-acl"] = options.acl;
     if (options?.cacheControl) headers["Cache-Control"] = options.cacheControl;
     if (options?.contentDisposition) {
@@ -511,14 +508,14 @@ export class S3Bucket {
       headers["x-amz-copy-source-if-none-match"] = options.copyOnlyIfNoneMatch;
     }
     if (options?.copyOnlyIfModifiedSince) {
-      headers["x-amz-copy-source-if-modified-since"] = options
-        .copyOnlyIfModifiedSince
-        .toISOString();
+      headers[
+        "x-amz-copy-source-if-modified-since"
+      ] = options.copyOnlyIfModifiedSince.toISOString();
     }
     if (options?.copyOnlyIfUnmodifiedSince) {
-      headers["x-amz-copy-source-if-unmodified-since"] = options
-        .copyOnlyIfUnmodifiedSince
-        .toISOString();
+      headers[
+        "x-amz-copy-source-if-unmodified-since"
+      ] = options.copyOnlyIfUnmodifiedSince.toISOString();
     }
     if (options?.grantFullControl) {
       headers["x-amz-grant-full-control"] = options.grantFullControl;
@@ -544,8 +541,9 @@ export class S3Bucket {
     }
     if (options?.lockMode) headers["x-amz-object-lock-mode"] = options.lockMode;
     if (options?.lockRetainUntil) {
-      headers["x-amz-object-lock-retain-until-date"] = options.lockRetainUntil
-        .toString();
+      headers[
+        "x-amz-object-lock-retain-until-date"
+      ] = options.lockRetainUntil.toString();
     }
     if (options?.legalHold) {
       headers["x-amz-object-lock-legal-hold"] = options.legalHold
@@ -559,12 +557,7 @@ export class S3Bucket {
       headers["x-amz-tagging-directive"] = options.taggingDirective;
     }
 
-    const resp = await this._doRequest(
-      destination,
-      {},
-      "PUT",
-      headers,
-    );
+    const resp = await this._doRequest(destination, {}, "PUT", headers);
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to copy object: ${resp.status} ${resp.statusText}`,
@@ -629,8 +622,12 @@ function encodeURIS3(input: string): string {
   let result = "";
   for (const ch of input) {
     if (
-      (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") ||
-      (ch >= "0" && ch <= "9") || ch == "_" || ch == "-" || ch == "~" ||
+      (ch >= "A" && ch <= "Z") ||
+      (ch >= "a" && ch <= "z") ||
+      (ch >= "0" && ch <= "9") ||
+      ch == "_" ||
+      ch == "-" ||
+      ch == "~" ||
       ch == "."
     ) {
       result += ch;
@@ -646,7 +643,9 @@ function encodeURIS3(input: string): string {
 const encoder = new TextEncoder();
 
 function stringToHex(input: string) {
-  return [...encoder.encode(input)].map((s) => "%" + s.toString(16)).join("")
+  return [...encoder.encode(input)]
+    .map((s) => "%" + s.toString(16))
+    .join("")
     .toUpperCase();
 }
 
@@ -674,17 +673,11 @@ function extractRoot(doc: Document, name: string): Xml {
   return doc.root;
 }
 
-function extractField(
-  node: Xml,
-  name: string,
-): Xml | undefined {
+function extractField(node: Xml, name: string): Xml | undefined {
   return node.children.find((node) => node.name === name);
 }
 
-function extractContent(
-  node: Xml,
-  name: string,
-): string | undefined {
+function extractContent(node: Xml, name: string): string | undefined {
   const field = extractField(node, name);
   const content = field?.content;
   if (content === undefined) {
