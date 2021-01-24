@@ -59,12 +59,11 @@ export class S3Bucket {
     params: Params,
     method: string,
     headers: Params,
-    body?: Uint8Array | undefined
+    body?: Uint8Array | undefined,
   ): Promise<Response> {
-    const url =
-      path == "/"
-        ? new URL(this.#host)
-        : new URL(encodeURIS3(path), this.#host);
+    const url = path == "/"
+      ? new URL(this.#host)
+      : new URL(encodeURIS3(path), this.#host);
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
@@ -84,7 +83,7 @@ export class S3Bucket {
 
   async headObject(
     key: string,
-    options?: GetObjectOptions
+    options?: GetObjectOptions,
   ): Promise<HeadObjectResponse | undefined> {
     const params: Params = {};
     const headers: Params = {};
@@ -131,13 +130,13 @@ export class S3Bucket {
     if (res.status !== 200) {
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
-        await res.text()
+        await res.text(),
       );
     }
 
     const expires = res.headers.get("expires");
     const lockRetainUntil = res.headers.get(
-      "x-amz-object-lock-retain-until-date"
+      "x-amz-object-lock-retain-until-date",
     );
     const partsCount = res.headers.get("x-amz-mp-parts-count");
     const legalHold = res.headers.get("x-amz-object-lock-legal-hold");
@@ -155,8 +154,8 @@ export class S3Bucket {
       etag: JSON.parse(res.headers.get("etag")!),
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
-      storageClass:
-        (res.headers.get("x-amz-storage-class") as StorageClass) ?? "STANDARD",
+      storageClass: (res.headers.get("x-amz-storage-class") as StorageClass) ??
+        "STANDARD",
       taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
 
       cacheControl: res.headers.get("Cache-Control") ?? undefined,
@@ -166,13 +165,13 @@ export class S3Bucket {
       contentType: res.headers.get("Content-Type") ?? undefined,
       expires: expires ? new Date(expires) : undefined,
       legalHold: legalHold ? true : legalHold === "OFF" ? false : undefined,
-      lockMode:
-        (res.headers.get("x-amz-object-lock-mode") as LockMode) ?? undefined,
+      lockMode: (res.headers.get("x-amz-object-lock-mode") as LockMode) ??
+        undefined,
       lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
       replicationStatus:
         (res.headers.get("x-amz-replication-status") as ReplicationStatus) ??
-        undefined,
+          undefined,
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
@@ -182,7 +181,7 @@ export class S3Bucket {
 
   async getObject(
     key: string,
-    options?: GetObjectOptions
+    options?: GetObjectOptions,
   ): Promise<GetObjectResponse | undefined> {
     const params: Params = {};
     const headers: Params = {};
@@ -228,13 +227,13 @@ export class S3Bucket {
     if (res.status !== 200) {
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
-        await res.text()
+        await res.text(),
       );
     }
 
     const expires = res.headers.get("expires");
     const lockRetainUntil = res.headers.get(
-      "x-amz-object-lock-retain-until-date"
+      "x-amz-object-lock-retain-until-date",
     );
     const partsCount = res.headers.get("x-amz-mp-parts-count");
     const legalHold = res.headers.get("x-amz-object-lock-legal-hold");
@@ -257,8 +256,8 @@ export class S3Bucket {
       etag: JSON.parse(res.headers.get("etag")!),
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
-      storageClass:
-        (res.headers.get("x-amz-storage-class") as StorageClass) ?? "STANDARD",
+      storageClass: (res.headers.get("x-amz-storage-class") as StorageClass) ??
+        "STANDARD",
       taggingCount: parseInt(res.headers.get("x-amz-tagging-count") ?? "0"),
 
       cacheControl: res.headers.get("Cache-Control") ?? undefined,
@@ -268,13 +267,13 @@ export class S3Bucket {
       contentType: res.headers.get("Content-Type") ?? undefined,
       expires: expires ? new Date(expires) : undefined,
       legalHold: legalHold ? true : legalHold === "OFF" ? false : undefined,
-      lockMode:
-        (res.headers.get("x-amz-object-lock-mode") as LockMode) ?? undefined,
+      lockMode: (res.headers.get("x-amz-object-lock-mode") as LockMode) ??
+        undefined,
       lockRetainUntil: lockRetainUntil ? new Date(lockRetainUntil) : undefined,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
       replicationStatus:
         (res.headers.get("x-amz-replication-status") as ReplicationStatus) ??
-        undefined,
+          undefined,
       versionId: res.headers.get("x-amz-version-id") ?? undefined,
       websiteRedirectLocation:
         res.headers.get("x-amz-website-redirect-location") ?? undefined,
@@ -283,7 +282,7 @@ export class S3Bucket {
   }
 
   async listObjects(
-    options?: ListObjectsOptions
+    options?: ListObjectsOptions,
   ): Promise<ListObjectsResponse | undefined> {
     // list-type param has to be first
     const params: Params = { "list-type": "2" };
@@ -311,7 +310,7 @@ export class S3Bucket {
       console.log(text);
       throw new S3Error(
         `Failed to get object: ${res.status} ${res.statusText}`,
-        text
+        text,
       );
     }
 
@@ -342,8 +341,9 @@ export class S3Bucket {
     }
 
     const parsed = {
-      isTruncated:
-        extractContent(root, "IsTruncated") === "true" ? true : false,
+      isTruncated: extractContent(root, "IsTruncated") === "true"
+        ? true
+        : false,
       contents: root.children
         .filter((node) => node.name === "Contents")
         .map<S3Object>((s3obj) => {
@@ -374,7 +374,7 @@ export class S3Bucket {
       maxKeys: maxkeys,
       commonPrefixes: extractField(
         root,
-        "CommonPrefixes"
+        "CommonPrefixes",
       )?.children.map<CommonPrefix>((prefix) => {
         return {
           prefix: extractContent(prefix, "Prefix"),
@@ -390,7 +390,7 @@ export class S3Bucket {
   }
 
   async *listAllObjects(
-    options: ListAllObjectsOptions
+    options: ListAllObjectsOptions,
   ): AsyncGenerator<S3Object> {
     let ls: ListObjectsResponse | undefined;
     do {
@@ -410,7 +410,7 @@ export class S3Bucket {
   async putObject(
     key: string,
     body: Uint8Array,
-    options?: PutObjectOptions
+    options?: PutObjectOptions,
   ): Promise<PutObjectResponse> {
     const headers: Params = {};
     if (options?.acl) headers["x-amz-acl"] = options.acl;
@@ -468,7 +468,7 @@ export class S3Bucket {
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
-        await resp.text()
+        await resp.text(),
       );
     }
     // clean up http body
@@ -482,12 +482,12 @@ export class S3Bucket {
   async copyObject(
     source: string,
     destination: string,
-    options?: CopyObjectOptions
+    options?: CopyObjectOptions,
   ): Promise<PutObjectResponse> {
     const headers: Params = {};
     headers["x-amz-copy-source"] = new URL(
       encodeURIS3(source),
-      this.#host
+      this.#host,
     ).toString();
     if (options?.acl) headers["x-amz-acl"] = options.acl;
     if (options?.cacheControl) headers["Cache-Control"] = options.cacheControl;
@@ -561,7 +561,7 @@ export class S3Bucket {
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to copy object: ${resp.status} ${resp.statusText}`,
-        await resp.text()
+        await resp.text(),
       );
     }
     // clean up http body
@@ -574,7 +574,7 @@ export class S3Bucket {
 
   async deleteObject(
     key: string,
-    options?: DeleteObjectOptions
+    options?: DeleteObjectOptions,
   ): Promise<DeleteObjectResponse> {
     const params: Params = {};
     if (options?.versionId) {
@@ -584,7 +584,7 @@ export class S3Bucket {
     if (resp.status !== 204) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
-        await resp.text()
+        await resp.text(),
       );
     }
     // clean up http body
@@ -600,16 +600,18 @@ export class S3Bucket {
    */
   async empty(): Promise<string[]> {
     const deleted: string[] = [];
-    for await (const k of pooledMap(
-      50,
-      this.listAllObjects({ batchSize: 1000 }),
-      async (o) => {
-        if (o.key) {
-          await this.deleteObject(o.key!);
-          return o.key!;
-        }
-      }
-    )) {
+    for await (
+      const k of pooledMap(
+        50,
+        this.listAllObjects({ batchSize: 1000 }),
+        async (o) => {
+          if (o.key) {
+            await this.deleteObject(o.key!);
+            return o.key!;
+          }
+        },
+      )
+    ) {
       deleted.push(k!);
     }
     return deleted;
@@ -665,7 +667,7 @@ function extractRoot(doc: Document, name: string): Xml {
   if (!doc.root || doc.root.name !== name) {
     throw new S3Error(
       `Malformed XML document. Missing ${name} field.`,
-      JSON.stringify(doc, undefined, 2)
+      JSON.stringify(doc, undefined, 2),
     );
   }
   return doc.root;

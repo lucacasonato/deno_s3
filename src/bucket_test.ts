@@ -29,7 +29,7 @@ Deno.test({
     const res = await bucket.putObject(
       "ltest/versions/1.0.0/raw/fixtures/%",
       encoder.encode("Test1"),
-      { contentType: "text/plain" }
+      { contentType: "text/plain" },
     );
 
     // teardown
@@ -43,12 +43,12 @@ Deno.test({
     const res = await bucket.putObject(
       "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
       encoder.encode("bla"),
-      { contentType: "text/plain" }
+      { contentType: "text/plain" },
     );
 
     // teardown
     await bucket.deleteObject(
-      "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md"
+      "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
     );
   },
 });
@@ -59,7 +59,7 @@ Deno.test({
     const res = await bucket.putObject(
       "servest/versions/1.0.0/raw/fixtures/日本語.txt",
       encoder.encode("bla"),
-      { contentType: "text/plain" }
+      { contentType: "text/plain" },
     );
 
     // teardown
