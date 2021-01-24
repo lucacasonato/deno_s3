@@ -1,7 +1,7 @@
 # deno_s3
 
 ![ci](https://github.com/lucacasonato/deno_aws_sign_v4/workflows/ci/badge.svg)
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/s3@0.3.1/mod.ts)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/s3@0.4.0/mod.ts)
 
 Amazon S3 for Deno
 
@@ -10,7 +10,7 @@ Amazon S3 for Deno
 ## Example
 
 ```ts
-import { S3Bucket } from "https://deno.land/x/s3@0.3.1/mod.ts";
+import { S3Bucket } from "https://deno.land/x/s3@0.4.0/mod.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
