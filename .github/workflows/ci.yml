@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno-version: [release, nightly]
+        deno-version: [release, canary]
         unstable: [false, true]
         no-check: [false, true]
     env:
