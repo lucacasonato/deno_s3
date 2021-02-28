@@ -8,21 +8,32 @@ on:
 
 jobs:
   test:
-    name: build-${{ matrix.deno-version == 'nightly' && 'nightly' || 'release' }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
+    name: test-${{ matrix.deno-version }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno-version: [v1.x, nightly]
+        deno-version: [release, nightly]
         unstable: [false, true]
         no-check: [false, true]
     env:
       AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     steps:
-      - name: Setup Deno environment
-        uses: denolib/setup-deno@v2.3.0
-        with:
-          deno-version: ${{ matrix.deno-version }}
+      - name: Install Deno (Unix)
+        if: |
+          !startsWith(matrix.os, 'windows')
+        run: |-
+          curl -fsSL https://deno.land/x/install/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+      - name: Install Deno (Windows)
+        if: startsWith(matrix.os, 'windows')
+        run: |-
+          curl -fsSL https://deno.land/x/install/install.sh | sh
+          echo "$HOME/.deno/bin" >> $env:GITHUB_PATH
+
+      - name: Upgrade to Deno canary
+        if: matrix.deno == 'canary'
+        run: deno upgrade --canary
 
       - uses: actions/checkout@v2
 
@@ -36,7 +47,19 @@ jobs:
         run: docker-compose up -d
 
       - name: Test
-        run: make test DENO_ARGS="${{ matrix.unstable && ' --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}"
+        run: make test DENO_ARGS="${{ matrix.unstable && '--coverage=./cov --unstable' || '' }}${{ matrix.no-check && ' --no-check' || '' }}"
+
+      - name: Generate lcov
+        if: matrix.unstable && matrix.deno-version == 'canary'
+        run: deno coverage --unstable --lcov ./cov > cov.lcov
+
+      - name: Upload coverage
+        if: matrix.unstable && matrix.deno-version == 'canary'
+        uses: coverallsapp/github-action@v1.1.2
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: ./cov.lcov
+          flag-name: test-${{ matrix.deno-version }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
 
       - name: Cleanup
         run: make cleanup
