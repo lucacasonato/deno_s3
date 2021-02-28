@@ -54,12 +54,11 @@ jobs:
         run: deno coverage --unstable --lcov ./cov > cov.lcov
 
       - name: Upload coverage
-        if: matrix.unstable && matrix.deno == 'canary'
+        if: matrix.unstable && matrix.deno == 'canary' && matrix.no-check
         uses: coverallsapp/github-action@v1.1.2
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: ./cov.lcov
-          flag-name: test-${{ matrix.deno }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
 
       - name: Cleanup
         run: make cleanup
