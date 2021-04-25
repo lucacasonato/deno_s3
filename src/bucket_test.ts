@@ -14,7 +14,7 @@ const encoder = new TextEncoder();
 Deno.test({
   name: "put object",
   async fn() {
-    const res = await bucket.putObject("test", encoder.encode("Test1"), {
+    await bucket.putObject("test", encoder.encode("Test1"), {
       contentType: "text/plain",
     });
 
@@ -26,7 +26,7 @@ Deno.test({
 Deno.test({
   name: "put object with % in key",
   async fn() {
-    const res = await bucket.putObject(
+    await bucket.putObject(
       "ltest/versions/1.0.0/raw/fixtures/%",
       encoder.encode("Test1"),
       { contentType: "text/plain" },
@@ -40,7 +40,7 @@ Deno.test({
 Deno.test({
   name: "put object with @ in key",
   async fn() {
-    const res = await bucket.putObject(
+    await bucket.putObject(
       "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
       encoder.encode("bla"),
       { contentType: "text/plain" },
@@ -56,7 +56,7 @@ Deno.test({
 Deno.test({
   name: "put object with 日本語 in key",
   async fn() {
-    const res = await bucket.putObject(
+    await bucket.putObject(
       "servest/versions/1.0.0/raw/fixtures/日本語.txt",
       encoder.encode("bla"),
       { contentType: "text/plain" },

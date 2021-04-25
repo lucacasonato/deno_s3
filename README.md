@@ -1,7 +1,7 @@
 # deno_s3
 
 ![ci](https://github.com/lucacasonato/deno_aws_sign_v4/workflows/ci/badge.svg)
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/s3@0.4.0/mod.ts)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/s3@0.4.1/mod.ts)
 [![Coverage Status](https://coveralls.io/repos/github/lucacasonato/deno_s3/badge.svg?branch=main)](https://coveralls.io/github/lucacasonato/deno_s3?branch=main)
 
 Amazon S3 for Deno
@@ -11,7 +11,7 @@ Amazon S3 for Deno
 ## Example
 
 ```ts
-import { S3Bucket } from "https://deno.land/x/s3@0.4.0/mod.ts";
+import { S3Bucket } from "https://deno.land/x/s3@0.4.1/mod.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
