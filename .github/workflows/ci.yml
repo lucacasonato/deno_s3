@@ -8,11 +8,11 @@ on:
 
 jobs:
   test:
-    name: test-${{ matrix.deno }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
+    name: test-${{ matrix.deno == 'canary' && 'canary' || 'stable' }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno: [release, canary]
+        deno: [v1.x, canary]
         unstable: [false, true]
         no-check: [false, true]
     env:
