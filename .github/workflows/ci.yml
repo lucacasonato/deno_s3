@@ -8,32 +8,21 @@ on:
 
 jobs:
   test:
-    name: test-${{ matrix.deno }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
+    name: test-${{ matrix.deno == 'canary' && 'canary' || 'stable' }}-${{ matrix.unstable && 'unstable' || 'stable' }}-${{ matrix.no-check && 'nocheck' || 'tsc' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        deno: [release, canary]
+        deno: [v1.x, canary]
         unstable: [false, true]
         no-check: [false, true]
     env:
       AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
       AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     steps:
-      - name: Install Deno (Unix)
-        if: |
-          !startsWith(matrix.os, 'windows')
-        run: |-
-          curl -fsSL https://deno.land/x/install/install.sh | sh
-          echo "$HOME/.deno/bin" >> $GITHUB_PATH
-      - name: Install Deno (Windows)
-        if: startsWith(matrix.os, 'windows')
-        run: |-
-          curl -fsSL https://deno.land/x/install/install.sh | sh
-          echo "$HOME/.deno/bin" >> $env:GITHUB_PATH
-
-      - name: Upgrade to Deno canary
-        if: matrix.deno == 'canary'
-        run: deno upgrade --canary
+      - name: Setup Deno
+        uses: denoland/setup-deno@main
+        with:
+          deno-version: ${{ matrix.deno }}
 
       - uses: actions/checkout@v2
 
