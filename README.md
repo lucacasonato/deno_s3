@@ -28,7 +28,7 @@ await bucket.putObject("test", encoder.encode("Test1"), {
   contentType: "text/plain",
 });
 
-// Retrieve an object form a bucket.
+// Retrieve an object from a bucket.
 const { body } = await bucket.getObject("test");
 const data = await new Response(body).text();
 console.log("File 'test' contains:", data);
