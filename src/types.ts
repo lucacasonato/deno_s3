@@ -8,7 +8,7 @@ export interface S3Object {
    */
   lastModified?: Date;
   /**
-   * The entity tag is a hash of the object. The ETag reflects changes only to the contents of an object, not its metadata. The ETag may or may not be an MD5 digest of the object data. Whether or not it is depends on how the object was created and how it is encrypted as described below:   Objects created by the PUT Object, POST Object, or Copy operation, or through the AWS Management Console, and are encrypted by SSE-S3 or plaintext, have ETags that are an MD5 digest of their object data.   Objects created by the PUT Object, POST Object, or Copy operation, or through the AWS Management Console, and are encrypted by SSE-C or SSE-KMS, have ETags that are not an MD5 digest of their object data.   If an object is created by either the Multipart Upload or Part Copy operation, the ETag is not an MD5 digest, regardless of the method of encryption.  
+   * The entity tag is a hash of the object. The ETag reflects changes only to the contents of an object, not its metadata. The ETag may or may not be an MD5 digest of the object data. Whether or not it is depends on how the object was created and how it is encrypted as described below:   Objects created by the PUT Object, POST Object, or Copy operation, or through the AWS Management Console, and are encrypted by SSE-S3 or plaintext, have ETags that are an MD5 digest of their object data.   Objects created by the PUT Object, POST Object, or Copy operation, or through the AWS Management Console, and are encrypted by SSE-C or SSE-KMS, have ETags that are not an MD5 digest of their object data.   If an object is created by either the Multipart Upload or Part Copy operation, the ETag is not an MD5 digest, regardless of the method of encryption.
    */
   eTag?: string;
   /**
@@ -113,7 +113,7 @@ export interface HeadObjectResponse {
   /** Specifies presentational information for the object. */
   contentDisposition?: string;
 
-  /** 
+  /**
    * Specifies what content encodings have been applied to the object
    * and thus what decoding mechanisms must be applied to obtain the
    * media-type referenced by the Content-Type field.
@@ -241,7 +241,7 @@ export interface ListObjectsResponse {
    */
   maxKeys?: number;
   /**
-   * All of the keys rolled up into a common prefix count as a single return when calculating the number of returns. A response can contain CommonPrefixes only if you specify a delimiter.  CommonPrefixes contains all (if there are any) keys between Prefix and the next occurrence of the string specified by a delimiter.  CommonPrefixes lists keys that act like subdirectories in the directory specified by Prefix. For example, if the prefix is notes/ and the delimiter is a slash (/) as in notes/summer/july, the common prefix is notes/summer/. All of the keys that roll up into a common prefix count as a single return when calculating the number of returns. 
+   * All of the keys rolled up into a common prefix count as a single return when calculating the number of returns. A response can contain CommonPrefixes only if you specify a delimiter.  CommonPrefixes contains all (if there are any) keys between Prefix and the next occurrence of the string specified by a delimiter.  CommonPrefixes lists keys that act like subdirectories in the directory specified by Prefix. For example, if the prefix is notes/ and the delimiter is a slash (/) as in notes/summer/july, the common prefix is notes/summer/. All of the keys that roll up into a common prefix count as a single return when calculating the number of returns.
    */
   commonPrefixes?: CommonPrefix[];
   /**
@@ -249,7 +249,7 @@ export interface ListObjectsResponse {
    */
   encodingType?: string;
   /**
-   * KeyCount is the number of keys returned with this request. KeyCount will always be less than equals to MaxKeys field. Say you ask for 50 keys, your result will include less than equals 50 keys 
+   * KeyCount is the number of keys returned with this request. KeyCount will always be less than equals to MaxKeys field. Say you ask for 50 keys, your result will include less than equals 50 keys
    */
   keyCount?: number;
   /**
@@ -330,7 +330,7 @@ export interface PutObjectOptions {
   /** Specifies presentational information for the object. */
   contentDisposition?: string;
 
-  /** 
+  /**
    * Specifies what content encodings have been applied to the object
    * and thus what decoding mechanisms must be applied to obtain the
    * media-type referenced by the Content-Type field.
@@ -422,7 +422,7 @@ export interface CopyObjectOptions {
   /** Specifies presentational information for the object. */
   contentDisposition?: string;
 
-  /** 
+  /**
    * Specifies what content encodings have been applied to the object
    * and thus what decoding mechanisms must be applied to obtain the
    * media-type referenced by the Content-Type field.
