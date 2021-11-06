@@ -1,10 +1,19 @@
-import { assert, assertEquals } from "../test_deps.ts";
+import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3Error } from "./error.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
   bucket: "test",
+  region: "us-east-1",
+  endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
+});
+
+const bucket2 = new S3Bucket({
+  accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
+  secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+  bucket: "test-2",
   region: "us-east-1",
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
 });
@@ -280,5 +289,28 @@ Deno.test({
     deleted.sort();
     keys.sort();
     assertEquals(deleted, keys);
+  },
+});
+
+Deno.test({
+  name: "should create a bucket",
+  async fn() {
+    const result = await bucket2.createBucket({
+      acl: "public-read-write",
+    });
+    assertEquals(result, {
+      location: "/test-2",
+    });
+  },
+});
+
+Deno.test({
+  name: "should throw if bucket already exists",
+  async fn() {
+    await assertThrowsAsync(
+      () => bucket2.createBucket(),
+      S3Error,
+      'Failed to create bucket "test-2": 409 Conflict',
+    );
   },
 });

@@ -9,6 +9,8 @@ import type { S3Config } from "./client.ts";
 import type {
   CommonPrefix,
   CopyObjectOptions,
+  CreateBucketOptions,
+  CreateBucketResponse,
   DeleteObjectOptions,
   DeleteObjectResponse,
   GetObjectOptions,
@@ -39,6 +41,7 @@ export class S3Bucket {
   #signer: Signer;
   #host: string;
   #bucket: string;
+  #region: string;
 
   constructor(config: S3BucketConfig) {
     this.#signer = new AWSSignerV4(config.region, {
@@ -46,6 +49,7 @@ export class S3Bucket {
       awsSecretKey: config.secretKey,
       sessionToken: config.sessionToken,
     });
+    this.#region = config.region;
     this.#bucket = config.bucket;
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
@@ -79,6 +83,58 @@ export class S3Bucket {
       signedRequest.headers.set("content-length", body.length.toFixed(0));
     }
     return fetch(signedRequest);
+  }
+
+  async createBucket(
+    options?: CreateBucketOptions,
+  ): Promise<CreateBucketResponse> {
+    const headers: Params = {};
+
+    if (options?.acl) {
+      headers["x-amz-acl"] = options.acl;
+    }
+    if (options?.grantFullControl) {
+      headers["x-amz-grant-full-control"] = options.grantFullControl;
+    }
+    if (options?.grantRead) {
+      headers["x-amz-grant-read"] = options.grantRead;
+    }
+    if (options?.grantReadAcp) {
+      headers["x-amz-grant-read-acp"] = options.grantReadAcp;
+    }
+    if (options?.grantWrite) {
+      headers["x-amz-grant-write"] = options.grantWrite;
+    }
+    if (options?.grantWriteAcp) {
+      headers["x-amz-grant-write-acp"] = options.grantWriteAcp;
+    }
+    if (options?.bucketObjectLockEnabled) {
+      headers["x-amz-bucket-object-lock-enabled"] =
+        options.bucketObjectLockEnabled;
+    }
+
+    const body = encoder.encode(
+      '<?xml version="1.0" encoding="UTF-8"?>' +
+        '<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">' +
+        `   <LocationConstraint>${this.#region}</LocationConstraint>` +
+        "</CreateBucketConfiguration>",
+    );
+
+    const resp = await this._doRequest("/", {}, "PUT", headers, body);
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to create bucket "${this.#bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+
+    return {
+      location: resp.headers.get("Location")!,
+    };
   }
 
   async headObject(

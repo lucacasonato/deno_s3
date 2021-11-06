@@ -175,7 +175,7 @@ export interface HeadObjectResponse {
   /**
    * Amazon S3 can return this if your request involves a bucket that is
    * either a source or destination in a replication rule.
-   * */
+   */
   replicationStatus?: ReplicationStatus;
 
   /**
@@ -313,6 +313,41 @@ export type ListAllObjectsOptions =
     /** The batch size for each listObjects request. */
     batchSize: number;
   };
+
+export interface CreateBucketOptions {
+  /** The canned ACL to apply to the bucket */
+  acl?:
+    | "private"
+    | "public-read"
+    | "public-read-write"
+    | "authenticated-read";
+
+  /** Specifies whether you want S3 Object Lock to be enabled for the new bucket. */
+  bucketObjectLockEnabled?: string;
+
+  /** Allows grantee the read, write, read ACP, and write ACP permissions on the bucket. */
+  grantFullControl?: string;
+
+  /** Allows grantee to list the objects in the bucket. */
+  grantRead?: string;
+
+  /** Allows grantee to read the bucket ACL. */
+  grantReadAcp?: string;
+
+  /**
+   * Allows grantee to create new objects in the bucket.
+   * For the bucket and object owners of existing objects, also allows deletions and overwrites of those objects.
+   */
+  grantWrite?: string;
+
+  /** Allows grantee to write the ACL for the applicable bucket. */
+  grantWriteAcp?: string;
+}
+
+export interface CreateBucketResponse {
+  /** The bucket location. */
+  location: string;
+}
 
 export interface PutObjectOptions {
   acl?:
