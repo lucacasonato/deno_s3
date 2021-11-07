@@ -7,7 +7,7 @@ import { encoder } from "./request.ts";
 const s3 = new S3({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
-  region: "us-east-1",
+  region: Deno.env.get("S3_REGION")!,
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
 });
 
@@ -16,7 +16,7 @@ Deno.test({
   async fn() {
     const resp = await s3.headBucket("test");
     assertEquals(resp, {
-      bucketRegion: undefined,
+      bucketRegion: "us-east-1",
       accessPointAlias: false,
     });
   },
