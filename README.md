@@ -11,8 +11,19 @@ Amazon S3 for Deno
 ## Example
 
 ```ts
-import { S3Bucket } from "https://deno.land/x/s3@0.4.1/mod.ts";
+import { S3, S3Bucket } from "https://deno.land/x/s3@0.4.1/mod.ts";
 
+// Create a new bucket.
+const s3 = new S3({
+  accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
+  secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+  region: "us-east-1",
+  endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
+});
+
+const myBucket = s3.createBucket("my-bucket", { acl: "private" });
+
+// Create a bucket instance from an existing bucket.
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,

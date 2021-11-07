@@ -3,14 +3,11 @@ import {
   decodeXMLEntities,
   parseXML,
   pooledMap,
-  sha256Hex,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
   CommonPrefix,
   CopyObjectOptions,
-  CreateBucketOptions,
-  CreateBucketResponse,
   DeleteObjectOptions,
   DeleteObjectResponse,
   GetObjectOptions,
@@ -28,10 +25,8 @@ import type {
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-
-interface Params {
-  [key: string]: string;
-}
+import { doRequest, encodeURIS3 } from "./utils.ts";
+import type { Params } from "./utils.ts";
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
@@ -40,8 +35,6 @@ export interface S3BucketConfig extends S3Config {
 export class S3Bucket {
   #signer: Signer;
   #host: string;
-  #bucket: string;
-  #region: string;
 
   constructor(config: S3BucketConfig) {
     this.#signer = new AWSSignerV4(config.region, {
@@ -49,92 +42,11 @@ export class S3Bucket {
       awsSecretKey: config.secretKey,
       sessionToken: config.sessionToken,
     });
-    this.#region = config.region;
-    this.#bucket = config.bucket;
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
       : config.bucket.indexOf(".") >= 0
       ? `https://s3.${config.region}.amazonaws.com/${config.bucket}/`
       : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
-  }
-
-  private async _doRequest(
-    path: string,
-    params: Params,
-    method: string,
-    headers: Params,
-    body?: Uint8Array | undefined,
-  ): Promise<Response> {
-    const url = path == "/"
-      ? new URL(this.#host)
-      : new URL(encodeURIS3(path), this.#host);
-    for (const key in params) {
-      url.searchParams.set(key, params[key]);
-    }
-    const request = new Request(url.toString(), {
-      headers,
-      method,
-      body,
-    });
-
-    const signedRequest = await this.#signer.sign("s3", request);
-    signedRequest.headers.set("x-amz-content-sha256", sha256Hex(body ?? ""));
-    if (body) {
-      signedRequest.headers.set("content-length", body.length.toFixed(0));
-    }
-    return fetch(signedRequest);
-  }
-
-  async createBucket(
-    options?: CreateBucketOptions,
-  ): Promise<CreateBucketResponse> {
-    const headers: Params = {};
-
-    if (options?.acl) {
-      headers["x-amz-acl"] = options.acl;
-    }
-    if (options?.grantFullControl) {
-      headers["x-amz-grant-full-control"] = options.grantFullControl;
-    }
-    if (options?.grantRead) {
-      headers["x-amz-grant-read"] = options.grantRead;
-    }
-    if (options?.grantReadAcp) {
-      headers["x-amz-grant-read-acp"] = options.grantReadAcp;
-    }
-    if (options?.grantWrite) {
-      headers["x-amz-grant-write"] = options.grantWrite;
-    }
-    if (options?.grantWriteAcp) {
-      headers["x-amz-grant-write-acp"] = options.grantWriteAcp;
-    }
-    if (options?.bucketObjectLockEnabled) {
-      headers["x-amz-bucket-object-lock-enabled"] =
-        options.bucketObjectLockEnabled;
-    }
-
-    const body = encoder.encode(
-      '<?xml version="1.0" encoding="UTF-8"?>' +
-        '<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">' +
-        `   <LocationConstraint>${this.#region}</LocationConstraint>` +
-        "</CreateBucketConfiguration>",
-    );
-
-    const resp = await this._doRequest("/", {}, "PUT", headers, body);
-
-    if (resp.status !== 200) {
-      throw new S3Error(
-        `Failed to create bucket "${this.#bucket}": ${resp.status} ${resp.statusText}`,
-        await resp.text(),
-      );
-    }
-
-    // clean up http body
-    await resp.arrayBuffer();
-
-    return {
-      location: resp.headers.get("Location")!,
-    };
   }
 
   async headObject(
@@ -176,7 +88,14 @@ export class S3Bucket {
       params["VersionId"] = options.versionId;
     }
 
-    const res = await this._doRequest(key, params, "HEAD", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "HEAD",
+      params,
+      headers,
+    });
     if (res.body) {
       await res.arrayBuffer();
     }
@@ -274,7 +193,14 @@ export class S3Bucket {
       params["VersionId"] = options.versionId;
     }
 
-    const res = await this._doRequest(key, params, "GET", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "GET",
+      params,
+      headers,
+    });
     if (res.status === 404) {
       // clean up http body
       await res.arrayBuffer();
@@ -355,7 +281,14 @@ export class S3Bucket {
       params["continuation-token"] = options.continuationToken;
     }
 
-    const res = await this._doRequest(`/`, params, "GET", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: `/`,
+      method: "GET",
+      params,
+      headers,
+    });
     if (res.status === 404) {
       // clean up http body
       await res.arrayBuffer();
@@ -520,7 +453,14 @@ export class S3Bucket {
       }
     }
 
-    const resp = await this._doRequest(key, {}, "PUT", headers, body);
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "PUT",
+      headers,
+      body,
+    });
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
@@ -613,7 +553,13 @@ export class S3Bucket {
       headers["x-amz-tagging-directive"] = options.taggingDirective;
     }
 
-    const resp = await this._doRequest(destination, {}, "PUT", headers);
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: destination,
+      method: "PUT",
+      headers,
+    });
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to copy object: ${resp.status} ${resp.statusText}`,
@@ -636,7 +582,13 @@ export class S3Bucket {
     if (options?.versionId) {
       params.versionId = options.versionId;
     }
-    const resp = await this._doRequest(key, params, "DELETE", {});
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "DELETE",
+      params,
+    });
     if (resp.status !== 204) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
@@ -672,37 +624,6 @@ export class S3Bucket {
     }
     return deleted;
   }
-}
-
-function encodeURIS3(input: string): string {
-  let result = "";
-  for (const ch of input) {
-    if (
-      (ch >= "A" && ch <= "Z") ||
-      (ch >= "a" && ch <= "z") ||
-      (ch >= "0" && ch <= "9") ||
-      ch == "_" ||
-      ch == "-" ||
-      ch == "~" ||
-      ch == "."
-    ) {
-      result += ch;
-    } else if (ch == "/") {
-      result += "/";
-    } else {
-      result += stringToHex(ch);
-    }
-  }
-  return result;
-}
-
-const encoder = new TextEncoder();
-
-function stringToHex(input: string) {
-  return [...encoder.encode(input)]
-    .map((s) => "%" + s.toString(16))
-    .join("")
-    .toUpperCase();
 }
 
 interface Document {
