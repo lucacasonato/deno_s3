@@ -1,5 +1,9 @@
 import { AWSSignerV4 } from "../deps.ts";
-import type { CreateBucketOptions } from "./types.ts";
+import type {
+  CreateBucketOptions,
+  HeadBucketOptions,
+  HeadBucketResponse,
+} from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -26,6 +30,37 @@ export class S3 {
     this.#host = config.endpointURL ??
       `https://s3.${config.region}.amazonaws.com/`;
     this.#config = { ...config };
+  }
+
+  async headBucket(
+    bucket: string,
+    options?: HeadBucketOptions,
+  ): Promise<HeadBucketResponse> {
+    const headers: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner "] = options.expectedBucketOwner;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "HEAD",
+      headers,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket "${bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return {
+      bucketRegion: resp.headers.get("x-amz-bucket-region") ?? undefined,
+      accessPointAlias: resp.headers.get("x-amz-access-point-alias") === "true",
+    };
   }
 
   async createBucket(

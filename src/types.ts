@@ -537,6 +537,15 @@ export interface DeleteObjectResponse {
   deleteMarker: boolean;
 }
 
+export interface HeadBucketOptions {
+  expectedBucketOwner?: string;
+}
+
+export interface HeadBucketResponse {
+  bucketRegion?: string;
+  accessPointAlias: boolean;
+}
+
 export interface CreateBucketOptions {
   /** The canned ACL to apply to the bucket */
   acl?:

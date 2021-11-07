@@ -12,6 +12,29 @@ const s3 = new S3({
 });
 
 Deno.test({
+  name: "[client] should get a bucket",
+  async fn() {
+    const resp = await s3.headBucket("test");
+    assertEquals(resp, {
+      bucketRegion: undefined,
+      accessPointAlias: false,
+    });
+  },
+});
+
+Deno.test({
+  name:
+    "[client] should throw when getting a bucket if the bucket does not exist",
+  async fn() {
+    await assertThrowsAsync(
+      () => s3.headBucket("not-existing-bucket"),
+      S3Error,
+      'Failed to get bucket "not-existing-bucket": 404 Not Found',
+    );
+  },
+});
+
+Deno.test({
   name: "[client] should create a new bucket",
   async fn() {
     const bucket = await s3.createBucket("test.bucket", {
