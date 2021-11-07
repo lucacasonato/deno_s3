@@ -566,3 +566,18 @@ export interface CreateBucketOptions {
   /** Allows grantee to write the ACL for the applicable bucket. */
   grantWriteAcp?: string;
 }
+
+export interface Bucket {
+  creationDate?: Date;
+  name?: string;
+}
+
+export interface Owner {
+  displayName?: string;
+  id?: string;
+}
+
+export interface ListBucketsResponses {
+  buckets: Array<Bucket>;
+  owner: Owner;
+}

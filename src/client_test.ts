@@ -42,3 +42,17 @@ Deno.test({
     );
   },
 });
+
+Deno.test({
+  name: "[client] should list all buckets",
+  async fn() {
+    const { buckets, owner } = await s3.listBuckets();
+    assert(buckets.length, "no buckets available");
+    assertEquals(buckets[0].name, "test");
+    assert(
+      buckets[0].creationDate instanceof Date,
+      "creationDate is not of type Date",
+    );
+    assertEquals(owner.displayName, "minio");
+  },
+});

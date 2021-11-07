@@ -1,6 +1,7 @@
 export * from "./src/client.ts";
 export * from "./src/bucket.ts";
 export type {
+  Bucket,
   CommonPrefix,
   CopyDirective,
   CopyObjectOptions,
@@ -12,9 +13,11 @@ export type {
   GetObjectResponse,
   HeadObjectResponse,
   ListAllObjectsOptions,
+  ListBucketsResponses,
   ListObjectsOptions,
   ListObjectsResponse,
   LockMode,
+  Owner,
   PutObjectOptions,
   PutObjectResponse,
   ReplicationStatus,

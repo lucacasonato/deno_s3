@@ -1,9 +1,16 @@
-import { AWSSignerV4 } from "../deps.ts";
-import type { CreateBucketOptions } from "./types.ts";
+import { AWSSignerV4, parseXML } from "../deps.ts";
+import type { CreateBucketOptions, ListBucketsResponses } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
 import type { Params } from "./request.ts";
+import {
+  extractContent,
+  extractField,
+  extractFields,
+  extractRoot,
+} from "./xml.ts";
+import type { Document } from "./xml.ts";
 
 export interface S3Config {
   region: string;
@@ -87,5 +94,45 @@ export class S3 {
       ...this.#config,
       bucket,
     });
+  }
+
+  async listBuckets(): Promise<ListBucketsResponses> {
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to list buckets": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    const xml = await resp.text();
+    return this.#parseListBucketsResponseXml(xml);
+  }
+
+  #parseListBucketsResponseXml(x: string): ListBucketsResponses {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "ListAllMyBucketsResult");
+    const buckets = extractField(root, "Buckets")!;
+    const owner = extractField(root, "Owner")!;
+
+    return {
+      buckets: extractFields(buckets, "Bucket")
+        .map((bucket) => {
+          const creationDate = extractContent(bucket, "CreationDate");
+          return {
+            name: extractContent(bucket, "Name"),
+            creationDate: creationDate ? new Date(creationDate) : undefined,
+          };
+        }),
+      owner: {
+        id: extractContent(owner, "ID"),
+        displayName: extractContent(owner, "DisplayName"),
+      },
+    };
   }
 }
