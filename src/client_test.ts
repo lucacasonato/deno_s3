@@ -33,7 +33,7 @@ Deno.test({
 
 Deno.test({
   name:
-    "[client] should throw when creating a bucket if the bucket already exists.",
+    "[client] should throw when creating a bucket if the bucket already exists",
   async fn() {
     await assertThrowsAsync(
       () => s3.createBucket("test.bucket"),

@@ -566,8 +566,3 @@ export interface CreateBucketOptions {
   /** Allows grantee to write the ACL for the applicable bucket. */
   grantWriteAcp?: string;
 }
-
-export interface CreateBucketResponse {
-  /** The bucket location. */
-  location: string;
-}
