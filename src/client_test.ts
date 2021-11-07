@@ -2,7 +2,7 @@ import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { S3 } from "./client.ts";
-import { encoder } from "./utils.ts";
+import { encoder } from "./request.ts";
 
 const s3 = new S3({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,

@@ -25,8 +25,8 @@ import type {
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-import { doRequest, encodeURIS3 } from "./utils.ts";
-import type { Params } from "./utils.ts";
+import { doRequest, encodeURIS3 } from "./request.ts";
+import type { Params } from "./request.ts";
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
