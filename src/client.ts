@@ -1,5 +1,5 @@
 import { AWSSignerV4 } from "../deps.ts";
-import type { CreateBucketOptions } from "./types.ts";
+import type { CreateBucketOptions, DeleteBucketOptions } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -87,5 +87,31 @@ export class S3 {
       ...this.#config,
       bucket,
     });
+  }
+
+  async deleteBucket(
+    bucket: string,
+    options?: DeleteBucketOptions,
+  ): Promise<void> {
+    const headers: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "DELETE",
+      headers,
+    });
+
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to delete bucket "${bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
   }
 }

@@ -566,3 +566,7 @@ export interface CreateBucketOptions {
   /** Allows grantee to write the ACL for the applicable bucket. */
   grantWriteAcp?: string;
 }
+
+export interface DeleteBucketOptions {
+  expectedBucketOwner?: string;
+}

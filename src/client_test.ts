@@ -27,7 +27,6 @@ Deno.test({
 
     // teardown
     await bucket.deleteObject("foo");
-    // @TODO: delete also bucket once s3.deleteBucket is implemented.
   },
 });
 
@@ -39,6 +38,25 @@ Deno.test({
       () => s3.createBucket("test.bucket"),
       S3Error,
       'Failed to create bucket "test.bucket": 409 Conflict',
+    );
+  },
+});
+
+Deno.test({
+  name: "[client] should delete a bucket",
+  async fn() {
+    await s3.deleteBucket("test.bucket");
+  },
+});
+
+Deno.test({
+  name:
+    "[client] should throw when deleting a bucket if the bucket does not exist",
+  async fn() {
+    await assertThrowsAsync(
+      () => s3.deleteBucket("test.bucket"),
+      S3Error,
+      'Failed to delete bucket "test.bucket": 404 Not Found',
     );
   },
 });
