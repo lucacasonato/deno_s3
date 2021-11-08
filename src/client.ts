@@ -3,8 +3,10 @@ import type {
   CreateBucketOptions,
   DeleteBucketPolicyOptions,
   GetBucketPolicyOptions,
+  GetBucketPolicyStatusOptions,
   ListBucketsResponses,
   Policy,
+  PolicyStatus,
   PutBucketPolicyOptions,
   Statement,
 } from "./types.ts";
@@ -231,8 +233,42 @@ export class S3 {
     await resp.arrayBuffer();
   }
 
-  #parseListBucketsResponseXml(x: string): ListBucketsResponses {
-    const doc: Document = parseXML(x);
+  async getBucketPolicyStatus(
+    bucket: string,
+    options?: GetBucketPolicyStatusOptions,
+  ): Promise<PolicyStatus> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policyStatus"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get policy status for bucket "${bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketPolicyStatusResult(
+      await resp.text(),
+    );
+  }
+
+  #parseListBucketsResponseXml(xml: string): ListBucketsResponses {
+    const doc: Document = parseXML(xml);
     const root = extractRoot(doc, "ListAllMyBucketsResult");
     const buckets = extractField(root, "Buckets")!;
     const owner = extractField(root, "Owner")!;
@@ -280,5 +316,13 @@ export class S3 {
       }
       return mapped;
     }
+  }
+
+  #parseGetBucketPolicyStatusResult(xml: string): PolicyStatus {
+    const doc: Document = parseXML(xml);
+    const root = extractRoot(doc, "PolicyStatus");
+    const isPublic =
+      extractContent(root, "IsPublic ")?.toLowerCase() === "true";
+    return { isPublic };
   }
 }

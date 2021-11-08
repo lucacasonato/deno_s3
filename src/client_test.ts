@@ -105,11 +105,22 @@ Deno.test({
     await s3.putBucketPolicy("test.bucket", { policy });
     const resp = await s3.getBucketPolicy("test.bucket");
     assert(resp);
+
+    // teardown
     await s3.deleteBucketPolicy("test.bucket");
+
     await assertThrowsAsync(
       () => s3.getBucketPolicy("test.bucket"),
       S3Error,
       'Failed to get policy for bucket "test.bucket": 404 Not Found',
     );
+  },
+});
+
+Deno.test({
+  name: "[client] should get the bucket policy status",
+  async fn() {
+    const resp = await s3.getBucketPolicyStatus("test.bucket");
+    assertEquals(resp, { isPublic: false });
   },
 });

@@ -728,3 +728,20 @@ export interface DeleteBucketPolicyOptions {
    */
   expectedBucketOwner?: string;
 }
+
+export interface GetBucketPolicyStatusOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface PolicyStatus {
+  /**
+   * The policy status for this bucket. TRUE indicates that this bucket is
+   * public. FALSE indicates that the bucket is not public.
+   */
+  isPublic: boolean;
+}
