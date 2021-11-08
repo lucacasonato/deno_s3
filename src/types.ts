@@ -581,3 +581,150 @@ export interface ListBucketsResponses {
   buckets: Array<Bucket>;
   owner: Owner;
 }
+
+/**
+ * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html
+ */
+export interface Statement {
+  /**
+   * You can provide an optional identifier, Sid (statement ID) for the policy statement.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_sid.html
+   */
+  sid?: string;
+
+  /**
+   * The Effect element is required and specifies whether the statement results
+   * an allow or an explicit deny.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_effect.html
+   */
+  effect: "Allow" | "Deny";
+
+  /**
+   * The account or user who is allowed access to the actions and resources in
+   * the statement. In a bucket policy, the principal is the user, account,
+   * service, or other entity that is the recipient of this permission.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+   */
+  principal?: string | Record<string, string | Array<string>>;
+
+  /**
+   * Use the NotPrincipal element to specify the IAM user, federated user,
+   * IAM role, AWS account, AWS service, or other principal that is not allowed
+   * or denied access to a resource.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notprincipal.html
+   */
+  notPrincipal?: string | Record<string, string | Array<string>>;
+
+  /**
+   * The Action element describes the specific action or actions that will be
+   * allowed or denied. Statements must include either an Action or NotAction
+   * element.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_action.html
+   */
+  action?: string | Array<string>;
+
+  /**
+   * NotAction is an advanced policy element that explicitly matches everything
+   * except the specified list of actions. Using NotAction can result in a
+   * shorter policy by listing only a few actions that should not match, rather
+   * than including a long list of actions that will match.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notaction.html
+   */
+  notAction?: string | Array<string>;
+
+  /**
+   * The Resource element specifies the object or objects that the statement covers.
+   * Statements must include either a Resource or a NotResource element.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html
+   */
+  resource?: string | Array<string>;
+
+  /**
+   * NotResource is an advanced policy element that explicitly matches every
+   * resource except those specified. Using NotResource can result in a shorter
+   * policy by listing only a few resources that should not match, rather than
+   * including a long list of resources that will match.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notresource.html
+   */
+  notResource?: string | Array<string>;
+
+  /**
+   * The Condition element (or Condition block) lets you specify conditions for
+   * when a policy is in effect.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition.html
+   */
+  condition?: Record<string, Record<string, string | Array<string>>>;
+}
+
+/**
+ * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html
+ */
+export interface Policy {
+  /**
+   * The Version policy element specifies the language syntax rules that are to
+   * be used to process a policy.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_version.html
+   */
+  version?: "2012-10-17" | "2008-10-17";
+
+  /**
+   * The id element specifies an optional identifier for the policy. The ID is
+   * used differently in different services.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_id.html
+   */
+  id?: string;
+
+  /**
+   * The policy statement(s).
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_statement.html
+   */
+  statement: Statement | Array<Statement>;
+}
+
+export interface PutBucketPolicyOptions {
+  /**
+   * Set this parameter to true to confirm that you want to remove your
+   * permissions to change this bucket policy in the future.
+   */
+  confirmRemoveSelfBucketAccess?: boolean;
+
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+
+  /** The bucket policy. */
+  policy: Policy;
+}
+
+export interface GetBucketPolicyOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface DeleteBucketPolicyOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
