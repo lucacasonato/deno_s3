@@ -4,14 +4,14 @@ test: export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 test: export S3_ENDPOINT_URL=http://localhost:9000
 
 test:
-	docker-compose up -d
+	docker-compose up -d && sleep 1
 
-	aws --endpoint-url=http://localhost:9000 s3 rm --recursive s3://test || true
-	aws --endpoint-url=http://localhost:9000 s3 rb s3://test || true
-	aws --endpoint-url=http://localhost:9000 s3 mb s3://test
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rm --recursive s3://test || true
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://test || true
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 mb s3://test
 
-	aws --endpoint-url=http://localhost:9000 s3 rm --recursive s3://test.bucket || true
-	aws --endpoint-url=http://localhost:9000 s3 rb s3://test.bucket || true
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rm --recursive s3://test.bucket || true
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://test.bucket || true
 
 	deno test -A ${DENO_ARGS}
 

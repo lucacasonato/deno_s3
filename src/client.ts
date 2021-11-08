@@ -1,5 +1,13 @@
-import { AWSSignerV4, parseXML } from "../deps.ts";
-import type { CreateBucketOptions, ListBucketsResponses } from "./types.ts";
+import { AWSSignerV4, md5, parseXML } from "../deps.ts";
+import type {
+  CreateBucketOptions,
+  GetBucketVersioningOptions,
+  ListBucketsResponses,
+  MfaDelete,
+  PutBucketVersioningOptions,
+  VersioningConfiguration,
+  VersioningStatus,
+} from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -114,6 +122,81 @@ export class S3 {
     return this.#parseListBucketsResponseXml(xml);
   }
 
+  async putBucketVersioning(
+    bucket: string,
+    options: PutBucketVersioningOptions = {},
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options.mfa) {
+      headers["x-amz-mfa"] = options.mfa;
+    }
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    const xml = this.#parsePutBucketVersioningRequestXml(options);
+    headers["Content-MD5"] = md5(xml);
+    const body = encoder.encode(xml);
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "PUT",
+      headers,
+      params,
+      body,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to update bucket versioning configuration for bucket "${bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+  }
+
+  async getBucketVersioning(
+    bucket: string,
+    options: GetBucketVersioningOptions = {},
+  ): Promise<VersioningConfiguration> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket versioning configuration for bucket "${bucket}"": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketVersioningResponseXml(
+      await resp.text(),
+    );
+  }
+
   #parseListBucketsResponseXml(x: string): ListBucketsResponses {
     const doc: Document = parseXML(x);
     const root = extractRoot(doc, "ListAllMyBucketsResult");
@@ -134,5 +217,43 @@ export class S3 {
         displayName: extractContent(owner, "DisplayName"),
       },
     };
+  }
+
+  #parsePutBucketVersioningRequestXml(
+    options: PutBucketVersioningOptions,
+  ): string {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<VersioningConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">\n';
+
+    if (options?.status) {
+      xml += `  <Status>${options.status}</Status>\n`;
+    }
+    if (options?.mfaDelete) {
+      xml += `  <MfaDelete>${options.mfaDelete}</MfaDelete>\n`;
+    }
+    xml += "</VersioningConfiguration>";
+
+    return xml;
+  }
+
+  #parseGetBucketVersioningResponseXml(x: string): VersioningConfiguration {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "VersioningConfiguration");
+    const status = extractContent(root, "Status") as
+      | VersioningStatus
+      | undefined;
+    const mfaDelete = extractContent(root, "MfaDelete") as
+      | MfaDelete
+      | undefined;
+    const config: VersioningConfiguration = {};
+
+    if (status) {
+      config.status = status;
+    }
+    if (mfaDelete) {
+      config.mfaDelete = mfaDelete;
+    }
+
+    return config;
   }
 }

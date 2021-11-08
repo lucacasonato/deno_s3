@@ -56,3 +56,17 @@ Deno.test({
     assertEquals(owner.displayName, "minio");
   },
 });
+
+Deno.test({
+  name: "[client] should put a bucket versioning configuration",
+  async fn() {
+    await s3.putBucketVersioning("test.bucket", {
+      status: "Enabled",
+    });
+
+    const resp = await s3.getBucketVersioning("test.bucket");
+    assertEquals(resp, {
+      status: "Enabled",
+    });
+  },
+});

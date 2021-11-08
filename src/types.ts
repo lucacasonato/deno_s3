@@ -581,3 +581,54 @@ export interface ListBucketsResponses {
   buckets: Array<Bucket>;
   owner: Owner;
 }
+
+export type MfaDelete = "Enabled" | "Disabled";
+export type VersioningStatus = "Enabled" | "Suspended";
+
+export interface PutBucketVersioningOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+
+  /**
+   * The concatenation of the authentication device's serial number, a space,
+   * and the value that is displayed on your authentication device.
+   */
+  mfa?: string;
+
+  /**
+   * Specifies whether MFA delete is enabled in the bucket versioning
+   * configuration. This element is only returned if the bucket has been
+   * configured with MFA delete. If the bucket has never been so configured,
+   * this element is not returned.
+   */
+  mfaDelete?: MfaDelete;
+
+  /** The versioning state of the bucket. */
+  status?: VersioningStatus;
+}
+
+export interface GetBucketVersioningOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface VersioningConfiguration {
+  /**
+   * Specifies whether MFA delete is enabled in the bucket versioning
+   * configuration. This element is only returned if the bucket has been
+   * configured with MFA delete. If the bucket has never been so configured,
+   * this element is not returned.
+   */
+  mfaDelete?: MfaDelete;
+
+  /** The versioning state of the bucket. */
+  status?: VersioningStatus;
+}
