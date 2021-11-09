@@ -39,7 +39,7 @@ export class S3 {
     const headers: Params = {};
 
     if (options?.expectedBucketOwner) {
-      headers["x-amz-expected-bucket-owner "] = options.expectedBucketOwner;
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
     }
 
     const resp = await doRequest({
