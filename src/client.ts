@@ -28,6 +28,13 @@ export class S3 {
     this.#config = { ...config };
   }
 
+  getBucket(bucket: string): S3Bucket {
+    return new S3Bucket({
+      ...this.#config,
+      bucket,
+    });
+  }
+
   async createBucket(
     bucket: string,
     options?: CreateBucketOptions,
@@ -84,12 +91,5 @@ export class S3 {
     await resp.arrayBuffer();
 
     return this.getBucket(bucket);
-  }
-
-  getBucket(bucket: string): S3Bucket {
-    return new S3Bucket({
-      ...this.#config,
-      bucket,
-    });
   }
 }
