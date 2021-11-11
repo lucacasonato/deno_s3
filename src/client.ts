@@ -1,8 +1,11 @@
 import { AWSSignerV4, md5, parseXML } from "../deps.ts";
+import { CommonPrefix, DeleteMarkerEntry, ObjectVersion } from "./types.ts";
 import type {
   CreateBucketOptions,
   GetBucketVersioningOptions,
   ListBucketsResponses,
+  ListObjectVersionsOptions,
+  ListVersionsResult,
   MfaDelete,
   PutBucketVersioningOptions,
   VersioningConfiguration,
@@ -201,6 +204,59 @@ export class S3 {
     );
   }
 
+  async listObjectVersions(
+    bucket: string,
+    options?: ListObjectVersionsOptions,
+  ): Promise<ListVersionsResult> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versions"] = "true";
+
+    if (options?.delimiter) {
+      params["delimiter"] = options.delimiter;
+    }
+    if (options?.encodingType) {
+      params["encoding-type"] = options.encodingType;
+    }
+    if (options?.keyMarker) {
+      params["key-marker"] = options.keyMarker;
+    }
+    if (options?.maxKeys) {
+      params["max-keys"] = options.maxKeys;
+    }
+    if (options?.prefix) {
+      params["prefix"] = options.prefix;
+    }
+    if (options?.versionIdMarker) {
+      params["version-id-marker"] = options.versionIdMarker;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to list object versions: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseListObjectVersionsResponseXml(
+      await resp.text(),
+    );
+  }
+
   #parseListBucketsResponseXml(x: string): ListBucketsResponses {
     const doc: Document = parseXML(x);
     const root = extractRoot(doc, "ListAllMyBucketsResult");
@@ -259,5 +315,81 @@ export class S3 {
     }
 
     return config;
+  }
+
+  #parseListObjectVersionsResponseXml(x: string): ListVersionsResult {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "ListVersionsResult");
+
+    const commonPrefixFields = extractFields(root, "CommonPrefixes");
+    const commonPrefixes: Array<CommonPrefix> = commonPrefixFields.map(
+      (commonPrefixField) => ({
+        prefix: extractContent(commonPrefixField, "Prefix"),
+      }),
+    );
+
+    const deleteMarkerFields = extractFields(root, "DeleteMarker");
+    const deleteMarkers: Array<DeleteMarkerEntry> = deleteMarkerFields.map(
+      (deleteMarkerField) => {
+        const lastModifiedField = extractContent(
+          deleteMarkerField,
+          "LastModified",
+        );
+        const ownerField = extractField(deleteMarkerField, "Owner");
+        return {
+          prefix: extractContent(deleteMarkerField, "Prefix"),
+          isLatest: extractContent(deleteMarkerField, "IsLatest") === "true",
+          key: extractContent(deleteMarkerField, "Key"),
+          lastModified: lastModifiedField
+            ? new Date(lastModifiedField)
+            : undefined,
+          owner: ownerField && {
+            displayName: extractContent(ownerField, "DisplayName"),
+            id: extractContent(ownerField, "ID"),
+          },
+          versionId: extractContent(deleteMarkerField, "VersionId"),
+        };
+      },
+    );
+
+    const versionFields = extractFields(root, "Version");
+    const versions: Array<ObjectVersion> = versionFields.map((versionField) => {
+      const lastModifiedField = extractContent(versionField, "LastModified");
+      const ownerField = extractField(versionField, "Owner");
+      return {
+        prefix: extractContent(versionField, "Prefix"),
+        eTag: extractContent(versionField, "ETag"),
+        isLatest: extractContent(versionField, "IsLatest") === "true",
+        key: extractContent(versionField, "Key"),
+        lastModified: lastModifiedField
+          ? new Date(lastModifiedField)
+          : undefined,
+        owner: ownerField && {
+          displayName: extractContent(ownerField, "DisplayName"),
+          id: extractContent(ownerField, "ID"),
+        },
+        size: Number(extractContent(versionField, "Size")),
+        storageClass: extractContent(versionField, "StorageClass") as
+          | "STANDARD"
+          | undefined,
+        versionId: extractContent(versionField, "VersionId"),
+      };
+    });
+
+    return {
+      commonPrefixes,
+      deleteMarkers,
+      delimiter: extractContent(root, "Delimiter"),
+      encodingType: extractContent(root, "EncodingType") as "url" | undefined,
+      isTruncated: extractContent(root, "IsTruncated") === "true",
+      keyMarker: extractContent(root, "KeyMarker"),
+      maxKeys: Number(extractContent(root, "MaxKeys")),
+      name: extractContent(root, "Name"),
+      nextKeyMarker: extractContent(root, "NextKeyMarker"),
+      nextVersionIdMarker: extractContent(root, "NextVersionIdMarker"),
+      prefix: extractContent(root, "Prefix"),
+      versions,
+      versionIdMarker: extractContent(root, "VersionIdMarker"),
+    };
   }
 }

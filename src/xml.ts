@@ -36,8 +36,8 @@ export function extractFields(node: Xml, name: string): Array<Xml> {
 export function extractContent(node: Xml, name: string): string | undefined {
   const field = extractField(node, name);
   const content = field?.content;
-  if (content === undefined) {
-    return content;
+  if (!content) {
+    return undefined;
   }
   return decodeXMLEntities(content);
 }

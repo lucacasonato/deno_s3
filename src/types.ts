@@ -621,3 +621,48 @@ export interface VersioningConfiguration {
   /** The versioning state of the bucket. */
   status?: VersioningStatus;
 }
+
+export interface ListObjectVersionsOptions {
+  delimiter?: string;
+  encodingType?: "url";
+  keyMarker?: string;
+  maxKeys?: string;
+  prefix?: string;
+  versionIdMarker?: string;
+  expectedBucketOwner?: string;
+}
+
+export interface DeleteMarkerEntry {
+  isLatest?: boolean;
+  key?: string;
+  lastModified?: Date;
+  owner?: Owner;
+  versionId?: string;
+}
+
+export interface ObjectVersion {
+  eTag?: string;
+  isLatest?: boolean;
+  key?: string;
+  lastModified?: Date;
+  owner?: Owner;
+  size?: number;
+  storageClass?: "STANDARD";
+  versionId?: string;
+}
+
+export interface ListVersionsResult {
+  commonPrefixes?: Array<CommonPrefix>;
+  deleteMarkers?: Array<DeleteMarkerEntry>;
+  delimiter?: string;
+  encodingType?: "url";
+  isTruncated?: boolean;
+  keyMarker?: string;
+  maxKeys?: number;
+  name?: string;
+  nextKeyMarker?: string;
+  nextVersionIdMarker?: string;
+  prefix?: string;
+  versions?: Array<ObjectVersion>;
+  versionIdMarker?: string;
+}
