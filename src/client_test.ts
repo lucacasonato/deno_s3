@@ -42,34 +42,23 @@ Deno.test({
     const body = await new Response(resp?.body).text();
     assertEquals(body, "test");
 
-    // teardown
-    await bucket.deleteObject("test");
-  },
-});
-
-Deno.test({
-  name:
-    "[client] should throw when creating a bucket if the bucket already exists",
-  async fn() {
     await assertThrowsAsync(
       () => s3.createBucket("test.bucket"),
       S3Error,
       'Failed to create bucket "test.bucket": 409 Conflict',
     );
+
+    // teardown
+    await bucket.deleteObject("test");
+    await s3.deleteBucket("test.bucket");
   },
 });
 
 Deno.test({
   name: "[client] should delete a bucket",
   async fn() {
+    await s3.createBucket("test.bucket");
     await s3.deleteBucket("test.bucket");
-  },
-});
-
-Deno.test({
-  name:
-    "[client] should throw when deleting a bucket if the bucket does not exist",
-  async fn() {
     await assertThrowsAsync(
       () => s3.deleteBucket("test.bucket"),
       S3Error,
