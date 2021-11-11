@@ -10,6 +10,8 @@ export type {
   DeleteObjectResponse,
   GetObjectOptions,
   GetObjectResponse,
+  HeadBucketOptions,
+  HeadBucketResponse,
   HeadObjectResponse,
   ListAllObjectsOptions,
   ListObjectsOptions,
