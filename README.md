@@ -21,7 +21,7 @@ const s3 = new S3({
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
 });
 
-const myBucket = s3.createBucket("my-bucket", { acl: "private" });
+const myBucket = await s3.createBucket("my-bucket", { acl: "private" });
 
 // Create a bucket instance from an existing bucket.
 const bucket = new S3Bucket({

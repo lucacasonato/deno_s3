@@ -10,8 +10,8 @@ export const encoder = new TextEncoder();
 interface S3RequestOptions {
   host: string;
   signer: Signer;
-  path: string;
   method: string;
+  path?: string;
   params?: Params;
   headers?: Params;
   body?: Uint8Array | undefined;
@@ -20,7 +20,7 @@ interface S3RequestOptions {
 export async function doRequest({
   host,
   signer,
-  path,
+  path = "/",
   params,
   method,
   headers,
