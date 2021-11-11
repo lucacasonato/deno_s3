@@ -19,13 +19,6 @@ Deno.test({
       bucketRegion: "us-east-1",
       accessPointAlias: false,
     });
-  },
-});
-
-Deno.test({
-  name:
-    "[client] should throw when getting a bucket if the bucket does not exist",
-  async fn() {
     await assertThrowsAsync(
       () => s3.headBucket("not-existing-bucket"),
       S3Error,
