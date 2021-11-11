@@ -83,6 +83,10 @@ export class S3 {
     // clean up http body
     await resp.arrayBuffer();
 
+    return this.getBucket(bucket);
+  }
+
+  getBucket(bucket: string): S3Bucket {
     return new S3Bucket({
       ...this.#config,
       bucket,
