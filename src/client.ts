@@ -42,9 +42,11 @@ export class S3 {
    * region is used. Optionally, you can specify a Region with the
    * `locationConstraint` option.
    *
-   *    s3.createBucket("my-bucket", {
-   *      locationConstraint: "EU",
-   *    })
+   * ```
+   * const bucket: S3Bucket = await s3.createBucket("my-bucket", {
+   *   locationConstraint: "EU",
+   * });
+   * ```
    */
   async createBucket(
     bucket: string,
