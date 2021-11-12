@@ -35,6 +35,13 @@ export class S3 {
     this.#config = { ...config };
   }
 
+  getBucket(bucket: string): S3Bucket {
+    return new S3Bucket({
+      ...this.#config,
+      bucket,
+    });
+  }
+
   async createBucket(
     bucket: string,
     options?: CreateBucketOptions,
@@ -90,10 +97,7 @@ export class S3 {
     // clean up http body
     await resp.arrayBuffer();
 
-    return new S3Bucket({
-      ...this.#config,
-      bucket,
-    });
+    return this.getBucket(bucket);
   }
 
   async listBuckets(): Promise<ListBucketsResponses> {
