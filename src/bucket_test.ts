@@ -1,4 +1,9 @@
-import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
+import {
+  assert,
+  assertEquals,
+  assertObjectMatch,
+  assertThrowsAsync,
+} from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
 import { S3Error } from "./error.ts";
 import type { Policy } from "./types.ts";
@@ -7,6 +12,14 @@ const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
   bucket: "test",
+  region: "us-east-1",
+  endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
+});
+
+const versioningBucket = new S3Bucket({
+  accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
+  secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+  bucket: "versioning-test",
   region: "us-east-1",
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
 });
@@ -349,5 +362,102 @@ Deno.test({
   async fn() {
     const resp = await bucket.getBucketPolicyStatus();
     assertEquals(resp, { isPublic: false });
+  },
+});
+
+Deno.test({
+  name: "[bucket] should put a bucket versioning configuration",
+  async fn() {
+    await versioningBucket.putBucketVersioning({ status: "Enabled" });
+
+    let resp = await versioningBucket.getBucketVersioning();
+    assertEquals(resp, { status: "Enabled" });
+
+    // teardown
+    await versioningBucket.putBucketVersioning({ status: "Suspended" });
+
+    resp = await versioningBucket.getBucketVersioning();
+    assertEquals(resp, { status: "Suspended" });
+  },
+});
+
+Deno.test({
+  name: "[bucket] should list object versions",
+  async fn() {
+    await versioningBucket.putBucketVersioning({ status: "Enabled" });
+
+    await versioningBucket.putObject("test", encoder.encode("test1"));
+    await versioningBucket.deleteObject("test");
+    await versioningBucket.putObject("test", encoder.encode("test2"));
+
+    const resp = await versioningBucket.listObjectVersions();
+
+    assertObjectMatch(resp, {
+      delimiter: undefined,
+      encodingType: undefined,
+      isTruncated: false,
+      keyMarker: undefined,
+      maxKeys: 1000,
+      name: "versioning-test",
+      nextKeyMarker: undefined,
+      nextVersionIdMarker: undefined,
+      prefix: undefined,
+      versionIdMarker: undefined,
+    });
+
+    assert(resp.versions);
+    assert(resp.deleteMarkers);
+    assertEquals(resp.versions.length, 2);
+    assertEquals(resp.deleteMarkers.length, 1);
+
+    assertObjectMatch(resp.deleteMarkers[0], {
+      prefix: undefined,
+      isLatest: false,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+    });
+
+    assertObjectMatch(resp.versions[0], {
+      isLatest: true,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+      prefix: undefined,
+      size: 5,
+      storageClass: "STANDARD",
+    });
+
+    assertObjectMatch(resp.versions[1], {
+      isLatest: false,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+      prefix: undefined,
+      size: 5,
+      storageClass: "STANDARD",
+    });
+
+    // teardown
+    await versioningBucket.putBucketVersioning({ status: "Suspended" });
+
+    if (resp.versions) {
+      for (const version of resp.versions) {
+        await versioningBucket.deleteObject("test", {
+          versionId: version.versionId,
+        });
+      }
+    }
+
+    if (resp.deleteMarkers) {
+      for (const deleteMarker of resp.deleteMarkers) {
+        await versioningBucket.deleteObject("test", {
+          versionId: deleteMarker.versionId,
+        });
+      }
+    }
   },
 });

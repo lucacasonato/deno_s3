@@ -1,5 +1,16 @@
 import { AWSSignerV4, md5, parseXML, pooledMap } from "../deps.ts";
 import type { S3Config } from "./client.ts";
+import {
+  DeleteMarkerEntry,
+  GetBucketVersioningOptions,
+  ListObjectVersionsOptions,
+  ListVersionsResult,
+  MfaDelete,
+  ObjectVersion,
+  PutBucketVersioningOptions,
+  VersioningConfiguration,
+  VersioningStatus,
+} from "./types.ts";
 import type {
   CommonPrefix,
   CopyObjectOptions,
@@ -30,7 +41,12 @@ import type { Signer } from "../deps.ts";
 import { doRequest, encoder, encodeURIS3 } from "./request.ts";
 import type { Params } from "./request.ts";
 import type { Document } from "./xml.ts";
-import { extractContent, extractField, extractRoot } from "./xml.ts";
+import {
+  extractContent,
+  extractField,
+  extractFields,
+  extractRoot,
+} from "./xml.ts";
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
@@ -761,6 +777,128 @@ export class S3Bucket {
     );
   }
 
+  async putBucketVersioning(
+    options: PutBucketVersioningOptions = {},
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options.mfa) {
+      headers["x-amz-mfa"] = options.mfa;
+    }
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    const xml = this.#parsePutBucketVersioningRequestXml(options);
+    headers["Content-MD5"] = md5(xml);
+    const body = encoder.encode(xml);
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "PUT",
+      headers,
+      params,
+      body,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to update bucket versioning configuration": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+  }
+
+  async getBucketVersioning(
+    options: GetBucketVersioningOptions = {},
+  ): Promise<VersioningConfiguration> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket versioning configuration: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketVersioningResponseXml(
+      await resp.text(),
+    );
+  }
+
+  async listObjectVersions(
+    options?: ListObjectVersionsOptions,
+  ): Promise<ListVersionsResult> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versions"] = "true";
+
+    if (options?.delimiter) {
+      params["delimiter"] = options.delimiter;
+    }
+    if (options?.encodingType) {
+      params["encoding-type"] = options.encodingType;
+    }
+    if (options?.keyMarker) {
+      params["key-marker"] = options.keyMarker;
+    }
+    if (options?.maxKeys) {
+      params["max-keys"] = options.maxKeys;
+    }
+    if (options?.prefix) {
+      params["prefix"] = options.prefix;
+    }
+    if (options?.versionIdMarker) {
+      params["version-id-marker"] = options.versionIdMarker;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to list object versions: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseListObjectVersionsResponseXml(
+      await resp.text(),
+    );
+  }
+
   // deno-lint-ignore no-explicit-any
   #parseGetBucketPolicyResult(result: Record<string, any>): Policy {
     const policy: Policy = {
@@ -796,5 +934,119 @@ export class S3Bucket {
     const isPublic =
       extractContent(root, "IsPublic ")?.toLowerCase() === "true";
     return { isPublic };
+  }
+
+  #parsePutBucketVersioningRequestXml(
+    options: PutBucketVersioningOptions,
+  ): string {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<VersioningConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">\n';
+
+    if (options?.status) {
+      xml += `  <Status>${options.status}</Status>\n`;
+    }
+    if (options?.mfaDelete) {
+      xml += `  <MfaDelete>${options.mfaDelete}</MfaDelete>\n`;
+    }
+    xml += "</VersioningConfiguration>";
+
+    return xml;
+  }
+
+  #parseGetBucketVersioningResponseXml(x: string): VersioningConfiguration {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "VersioningConfiguration");
+    const status = extractContent(root, "Status") as
+      | VersioningStatus
+      | undefined;
+    const mfaDelete = extractContent(root, "MfaDelete") as
+      | MfaDelete
+      | undefined;
+    const config: VersioningConfiguration = {};
+
+    if (status) {
+      config.status = status;
+    }
+    if (mfaDelete) {
+      config.mfaDelete = mfaDelete;
+    }
+
+    return config;
+  }
+
+  #parseListObjectVersionsResponseXml(x: string): ListVersionsResult {
+    const doc: Document = parseXML(x);
+    const root = extractRoot(doc, "ListVersionsResult");
+
+    const commonPrefixFields = extractFields(root, "CommonPrefixes");
+    const commonPrefixes: Array<CommonPrefix> = commonPrefixFields.map(
+      (commonPrefixField) => ({
+        prefix: extractContent(commonPrefixField, "Prefix"),
+      }),
+    );
+
+    const deleteMarkerFields = extractFields(root, "DeleteMarker");
+    const deleteMarkers: Array<DeleteMarkerEntry> = deleteMarkerFields.map(
+      (deleteMarkerField) => {
+        const lastModifiedField = extractContent(
+          deleteMarkerField,
+          "LastModified",
+        );
+        const ownerField = extractField(deleteMarkerField, "Owner");
+        return {
+          prefix: extractContent(deleteMarkerField, "Prefix"),
+          isLatest: extractContent(deleteMarkerField, "IsLatest") === "true",
+          key: extractContent(deleteMarkerField, "Key"),
+          lastModified: lastModifiedField
+            ? new Date(lastModifiedField)
+            : undefined,
+          owner: ownerField && {
+            displayName: extractContent(ownerField, "DisplayName"),
+            id: extractContent(ownerField, "ID"),
+          },
+          versionId: extractContent(deleteMarkerField, "VersionId"),
+        };
+      },
+    );
+
+    const versionFields = extractFields(root, "Version");
+    const versions: Array<ObjectVersion> = versionFields.map((versionField) => {
+      const lastModifiedField = extractContent(versionField, "LastModified");
+      const ownerField = extractField(versionField, "Owner");
+      return {
+        prefix: extractContent(versionField, "Prefix"),
+        eTag: extractContent(versionField, "ETag"),
+        isLatest: extractContent(versionField, "IsLatest") === "true",
+        key: extractContent(versionField, "Key"),
+        lastModified: lastModifiedField
+          ? new Date(lastModifiedField)
+          : undefined,
+        owner: ownerField && {
+          displayName: extractContent(ownerField, "DisplayName"),
+          id: extractContent(ownerField, "ID"),
+        },
+        size: Number(extractContent(versionField, "Size")),
+        storageClass: extractContent(versionField, "StorageClass") as
+          | "STANDARD"
+          | undefined,
+        versionId: extractContent(versionField, "VersionId"),
+      };
+    });
+
+    return {
+      commonPrefixes,
+      deleteMarkers,
+      delimiter: extractContent(root, "Delimiter"),
+      encodingType: extractContent(root, "EncodingType") as "url" | undefined,
+      isTruncated: extractContent(root, "IsTruncated") === "true",
+      keyMarker: extractContent(root, "KeyMarker"),
+      maxKeys: Number(extractContent(root, "MaxKeys")),
+      name: extractContent(root, "Name"),
+      nextKeyMarker: extractContent(root, "NextKeyMarker"),
+      nextVersionIdMarker: extractContent(root, "NextVersionIdMarker"),
+      prefix: extractContent(root, "Prefix"),
+      versions,
+      versionIdMarker: extractContent(root, "VersionIdMarker"),
+    };
   }
 }
