@@ -13,6 +13,20 @@ export interface S3Config {
   endpointURL?: string;
 }
 
+/**
+ * A S3 instance can be used to manage multiple buckets.
+ *
+ * ```
+ * const s3 = new S3({
+ *   accessKeyID: "<AWS_ACCESS_KEY_ID>",
+ *   secretKey: "<AWS_SECRET_ACCESS_KEY>",
+ *   region: "eu-south-1",
+ * });
+ *
+ * const bucket1: S3Bucket = s3.getBucket("my-bucket");
+ * const bucket2: S3Bucket = await s3.createBucket("my-second-bucket");
+ * ```
+ */
 export class S3 {
   readonly #signer: AWSSignerV4;
   readonly #host: string;
