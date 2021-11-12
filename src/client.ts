@@ -28,6 +28,7 @@ export class S3 {
     this.#config = { ...config };
   }
 
+  /** Creates a new S3Bucket instance with the same config passed to the S3 client. */
   getBucket(bucket: string): S3Bucket {
     return new S3Bucket({
       ...this.#config,
@@ -35,6 +36,16 @@ export class S3 {
     });
   }
 
+  /**
+   * Creates a new S3 bucket. By default, the bucket is created the region
+   * specified in the S3 options. If not specified the US East (N. Virginia)
+   * region is used. Optionally, you can specify a Region with the
+   * `locationConstraint` option.
+   *
+   *    s3.createBucket("my-bucket", {
+   *      locationConstraint: "EU",
+   *    })
+   */
   async createBucket(
     bucket: string,
     options?: CreateBucketOptions,
