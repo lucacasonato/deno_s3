@@ -1,9 +1,5 @@
 import { AWSSignerV4 } from "../deps.ts";
-import type {
-  CreateBucketOptions,
-  HeadBucketOptions,
-  HeadBucketResponse,
-} from "./types.ts";
+import type { CreateBucketOptions, HeadBucketOptions } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -54,10 +50,20 @@ export class S3 {
     });
   }
 
+  /**
+   * Determine if a bucket exists and if you have permission to access it.
+   * The method returns a S3Bucket if the bucket exists and if you have
+   * permission to access it. If the bucket does not exist or you do not have
+   * permission to access it an `S3Error` is thrown.
+   *
+   * To use this operation, you must have permissions to perform the
+   * s3:ListBucket action. The bucket owner has this permission by default and
+   * can grant this permission to others.
+   */
   async headBucket(
     bucket: string,
     options?: HeadBucketOptions,
-  ): Promise<HeadBucketResponse> {
+  ): Promise<S3Bucket> {
     const headers: Params = {};
 
     if (options?.expectedBucketOwner) {
@@ -79,10 +85,7 @@ export class S3 {
       );
     }
 
-    return {
-      bucketRegion: resp.headers.get("x-amz-bucket-region") ?? undefined,
-      accessPointAlias: resp.headers.get("x-amz-access-point-alias") === "true",
-    };
+    return this.getBucket(bucket);
   }
 
   /**

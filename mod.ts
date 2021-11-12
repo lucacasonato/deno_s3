@@ -12,7 +12,6 @@ export type {
   GetObjectOptions,
   GetObjectResponse,
   HeadBucketOptions,
-  HeadBucketResponse,
   HeadObjectResponse,
   ListAllObjectsOptions,
   ListObjectsOptions,
