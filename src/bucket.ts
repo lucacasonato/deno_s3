@@ -284,7 +284,6 @@ export class S3Bucket {
     const res = await doRequest({
       host: this.#host,
       signer: this.#signer,
-      path: `/`,
       method: "GET",
       params,
       headers,

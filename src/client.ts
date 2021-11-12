@@ -17,6 +17,20 @@ export interface S3Config {
   endpointURL?: string;
 }
 
+/**
+ * A S3 instance can be used to manage multiple buckets.
+ *
+ * ```
+ * const s3 = new S3({
+ *   accessKeyID: "<AWS_ACCESS_KEY_ID>",
+ *   secretKey: "<AWS_SECRET_ACCESS_KEY>",
+ *   region: "eu-south-1",
+ * });
+ *
+ * const bucket1: S3Bucket = s3.getBucket("my-bucket");
+ * const bucket2: S3Bucket = await s3.createBucket("my-second-bucket");
+ * ```
+ */
 export class S3 {
   readonly #signer: AWSSignerV4;
   readonly #host: string;
@@ -30,6 +44,14 @@ export class S3 {
     this.#host = config.endpointURL ??
       `https://s3.${config.region}.amazonaws.com/`;
     this.#config = { ...config };
+  }
+
+  /** Creates a new S3Bucket instance with the same config passed to the S3 client. */
+  getBucket(bucket: string): S3Bucket {
+    return new S3Bucket({
+      ...this.#config,
+      bucket,
+    });
   }
 
   async headBucket(
@@ -63,6 +85,18 @@ export class S3 {
     };
   }
 
+  /**
+   * Creates a new S3 bucket. By default, the bucket is created in the region
+   * specified with the S3 options. If not specified the US East (N. Virginia)
+   * region is used. Optionally, you can specify a Region with the
+   * `locationConstraint` option.
+   *
+   * ```
+   * const bucket: S3Bucket = await s3.createBucket("my-bucket", {
+   *   locationConstraint: "EU",
+   * });
+   * ```
+   */
   async createBucket(
     bucket: string,
     options?: CreateBucketOptions,
@@ -95,7 +129,9 @@ export class S3 {
     const body = encoder.encode(
       '<?xml version="1.0" encoding="UTF-8"?>' +
         '<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">' +
-        `   <LocationConstraint>${this.#config.region}</LocationConstraint>` +
+        `   <LocationConstraint>${
+          options?.locationConstraint ?? this.#config.region
+        }</LocationConstraint>` +
         "</CreateBucketConfiguration>",
     );
 
@@ -118,9 +154,6 @@ export class S3 {
     // clean up http body
     await resp.arrayBuffer();
 
-    return new S3Bucket({
-      ...this.#config,
-      bucket,
-    });
+    return this.getBucket(bucket);
   }
 }

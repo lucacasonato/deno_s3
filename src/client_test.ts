@@ -12,6 +12,23 @@ const s3 = new S3({
 });
 
 Deno.test({
+  name: "[client] should create an instance from an existing bucket",
+  async fn() {
+    const bucket = await s3.getBucket("test");
+    assert(bucket instanceof S3Bucket);
+
+    // Check if returned bucket instance is working.
+    await bucket.putObject("test", encoder.encode("test"));
+    const resp = await bucket.getObject("test");
+    const body = await new Response(resp?.body).text();
+    assertEquals(body, "test");
+
+    // teardown
+    await bucket.deleteObject("test");
+  },
+});
+
+Deno.test({
   name: "[client] should get a bucket",
   async fn() {
     const resp = await s3.headBucket("test");
@@ -30,19 +47,19 @@ Deno.test({
 Deno.test({
   name: "[client] should create a new bucket",
   async fn() {
-    const bucket = await s3.createBucket("test.bucket", {
+    const bucket = await s3.createBucket("create-bucket-test", {
       acl: "public-read-write",
     });
     assert(bucket instanceof S3Bucket);
 
     // Check if returned bucket instance is working.
-    await bucket.putObject("foo", encoder.encode("bar"));
-    const resp = await bucket.getObject("foo");
+    await bucket.putObject("test", encoder.encode("test"));
+    const resp = await bucket.getObject("test");
     const body = await new Response(resp?.body).text();
-    assertEquals(body, "bar");
+    assertEquals(body, "test");
 
     // teardown
-    await bucket.deleteObject("foo");
+    await bucket.deleteObject("test");
     // @TODO: delete also bucket once s3.deleteBucket is implemented.
   },
 });
@@ -52,9 +69,9 @@ Deno.test({
     "[client] should throw when creating a bucket if the bucket already exists",
   async fn() {
     await assertThrowsAsync(
-      () => s3.createBucket("test.bucket"),
+      () => s3.createBucket("create-bucket-test"),
       S3Error,
-      'Failed to create bucket "test.bucket": 409 Conflict',
+      'Failed to create bucket "create-bucket-test": 409 Conflict',
     );
   },
 });

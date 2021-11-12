@@ -11,8 +11,8 @@ test:
 	aws --endpoint-url=http://localhost:9000 s3 rb s3://test || true
 	aws --endpoint-url=http://localhost:9000 s3 mb s3://test
 
-	aws --endpoint-url=http://localhost:9000 s3 rm --recursive s3://test.bucket || true
-	aws --endpoint-url=http://localhost:9000 s3 rb s3://test.bucket || true
+	aws --endpoint-url=http://localhost:9000 s3 rm --recursive s3://create-bucket-test || true
+	aws --endpoint-url=http://localhost:9000 s3 rb s3://create-bucket-test || true
 
 	deno test -A ${DENO_ARGS}
 
