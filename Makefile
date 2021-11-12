@@ -10,10 +10,12 @@ test:
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://test || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 mb s3://test
 
-	aws --endpoint-url=${S3_ENDPOINT_URL} s3api delete-objects --bucket versioning-test \
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3api delete-objects \
+		--bucket versioning-test \
 		--delete "$$(aws --endpoint-url=${S3_ENDPOINT_URL} s3api list-object-versions \
-			--bucket versioning-test --output=json \
-			--query='{Objects: *[].{Key:Key,VersionId:VersionId}}' | cat)" | cat || true
+						 --bucket versioning-test \
+						 --output=json \
+						 --query='{Objects: *[].{Key:Key,VersionId:VersionId}}' | cat)" | cat || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://versioning-test || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 mb s3://versioning-test
 
