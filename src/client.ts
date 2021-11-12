@@ -51,8 +51,8 @@ export class S3 {
   }
 
   /**
-   * Creates a new S3 bucket. By default, the bucket is created the region
-   * specified in the S3 options. If not specified the US East (N. Virginia)
+   * Creates a new S3 bucket. By default, the bucket is created in the region
+   * specified with the S3 options. If not specified the US East (N. Virginia)
    * region is used. Optionally, you can specify a Region with the
    * `locationConstraint` option.
    *
