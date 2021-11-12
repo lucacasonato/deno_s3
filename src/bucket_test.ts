@@ -1,5 +1,7 @@
-import { assert, assertEquals } from "../test_deps.ts";
+import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3Error } from "./error.ts";
+import type { Policy } from "./types.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
@@ -10,6 +12,25 @@ const bucket = new S3Bucket({
 });
 
 const encoder = new TextEncoder();
+
+const policy: Policy = {
+  version: "2012-10-17",
+  id: "test",
+  statement: [
+    {
+      effect: "Allow",
+      principal: {
+        AWS: ["111122223333", "444455556666"],
+      },
+      action: [
+        "s3:PutObject",
+      ],
+      resource: [
+        "arn:aws:s3:::*",
+      ],
+    },
+  ],
+};
 
 Deno.test({
   name: "[bucket] put object",
@@ -280,5 +301,53 @@ Deno.test({
     deleted.sort();
     keys.sort();
     assertEquals(deleted, keys);
+  },
+});
+
+Deno.test({
+  name: "[bucket] should put a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assertEquals(resp, policy);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should delete a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assert(resp);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+
+    await assertThrowsAsync(
+      () => bucket.getBucketPolicy(),
+      S3Error,
+      "Failed to get bucket policy: 404 Not Found",
+    );
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get the bucket policy status",
+  async fn() {
+    const resp = await bucket.getBucketPolicyStatus();
+    assertEquals(resp, { isPublic: false });
   },
 });
