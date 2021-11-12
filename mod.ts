@@ -5,6 +5,7 @@ export type {
   CopyDirective,
   CopyObjectOptions,
   CopyObjectResponse,
+  CreateBucketConfiguration,
   CreateBucketOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,

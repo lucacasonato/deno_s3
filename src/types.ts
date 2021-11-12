@@ -566,7 +566,16 @@ export type LocationConstraint =
   | "us-west-1"
   | "us-west-2";
 
-export interface CreateBucketOptions {
+export interface CreateBucketConfiguration {
+  /**
+   * Specifies the Region where the bucket will be created. If you don't
+   * specify a Region, the bucket is created in the US East (N. Virginia)
+   * Region (us-east-1).
+   */
+  locationConstraint?: LocationConstraint;
+}
+
+export interface CreateBucketOptions extends CreateBucketConfiguration {
   /** The canned ACL to apply to the bucket */
   acl?:
     | "private"
@@ -594,11 +603,4 @@ export interface CreateBucketOptions {
 
   /** Allows grantee to write the ACL for the applicable bucket. */
   grantWriteAcp?: string;
-
-  /**
-   * Specifies the Region where the bucket will be created. If you don't
-   * specify a Region, the bucket is created in the US East (N. Virginia)
-   * Region (us-east-1).
-   */
-  locationConstraint?: LocationConstraint;
 }
