@@ -14,6 +14,7 @@ export type {
   ListAllObjectsOptions,
   ListObjectsOptions,
   ListObjectsResponse,
+  LocationConstraint,
   LockMode,
   PutObjectOptions,
   PutObjectResponse,
