@@ -31,7 +31,7 @@ Deno.test({
 Deno.test({
   name: "[client] should create a new bucket",
   async fn() {
-    const bucket = await s3.createBucket("test.bucket", {
+    const bucket = await s3.createBucket("create-bucket-test", {
       acl: "public-read-write",
     });
     assert(bucket instanceof S3Bucket);
@@ -53,9 +53,9 @@ Deno.test({
     "[client] should throw when creating a bucket if the bucket already exists",
   async fn() {
     await assertThrowsAsync(
-      () => s3.createBucket("test.bucket"),
+      () => s3.createBucket("create-bucket-test"),
       S3Error,
-      'Failed to create bucket "test.bucket": 409 Conflict',
+      'Failed to create bucket "create-bucket-test": 409 Conflict',
     );
   },
 });
