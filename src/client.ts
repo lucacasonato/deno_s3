@@ -78,7 +78,9 @@ export class S3 {
     const body = encoder.encode(
       '<?xml version="1.0" encoding="UTF-8"?>' +
         '<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">' +
-        `   <LocationConstraint>${this.#config.region}</LocationConstraint>` +
+        `   <LocationConstraint>${
+          options?.locationConstraint ?? this.#config.region
+        }</LocationConstraint>` +
         "</CreateBucketConfiguration>",
     );
 
