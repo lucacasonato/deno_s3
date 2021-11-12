@@ -257,8 +257,8 @@ export class S3 {
     );
   }
 
-  #parseListBucketsResponseXml(x: string): ListBucketsResponses {
-    const doc: Document = parseXML(x);
+  #parseListBucketsResponseXml(xml: string): ListBucketsResponses {
+    const doc: Document = parseXML(xml);
     const root = extractRoot(doc, "ListAllMyBucketsResult");
     const buckets = extractField(root, "Buckets")!;
     const owner = extractField(root, "Owner")!;

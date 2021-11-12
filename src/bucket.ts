@@ -1,10 +1,13 @@
-import { AWSSignerV4, parseXML, pooledMap } from "../deps.ts";
+import { AWSSignerV4, md5, parseXML, pooledMap } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
   CommonPrefix,
   CopyObjectOptions,
+  DeleteBucketPolicyOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
+  GetBucketPolicyOptions,
+  GetBucketPolicyStatusOptions,
   GetObjectOptions,
   GetObjectResponse,
   HeadObjectResponse,
@@ -12,15 +15,19 @@ import type {
   ListObjectsOptions,
   ListObjectsResponse,
   LockMode,
+  Policy,
+  PolicyStatus,
+  PutBucketPolicyOptions,
   PutObjectOptions,
   PutObjectResponse,
   ReplicationStatus,
   S3Object,
+  Statement,
   StorageClass,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-import { doRequest, encodeURIS3 } from "./request.ts";
+import { doRequest, encoder, encodeURIS3 } from "./request.ts";
 import type { Params } from "./request.ts";
 import type { Document } from "./xml.ts";
 import { extractContent, extractField, extractRoot } from "./xml.ts";
@@ -617,5 +624,177 @@ export class S3Bucket {
       deleted.push(k!);
     }
     return deleted;
+  }
+
+  async putBucketPolicy(
+    options: PutBucketPolicyOptions,
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+    const json = JSON.stringify(options.policy);
+    const body = encoder.encode(json);
+
+    headers["Content-MD5"] = md5(json);
+
+    if (typeof options.confirmRemoveSelfBucketAccess !== "undefined") {
+      headers["x-amz-confirm-remove-self-bucket-access"] = options
+        .confirmRemoveSelfBucketAccess.toString();
+    }
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policy"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "PUT",
+      headers,
+      params,
+      body,
+    });
+
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to create bucket policy: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+  }
+
+  async getBucketPolicy(
+    options?: GetBucketPolicyOptions,
+  ): Promise<Policy> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policy"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket policy: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    const result = JSON.parse(await resp.text());
+
+    return this.#parseGetBucketPolicyResult(result);
+  }
+
+  async deleteBucketPolicy(
+    options?: DeleteBucketPolicyOptions,
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policy"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "DELETE",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to delete bucket policy": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+  }
+
+  async getBucketPolicyStatus(
+    options?: GetBucketPolicyStatusOptions,
+  ): Promise<PolicyStatus> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policyStatus"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket policy status": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketPolicyStatusResult(
+      await resp.text(),
+    );
+  }
+
+  // deno-lint-ignore no-explicit-any
+  #parseGetBucketPolicyResult(result: Record<string, any>): Policy {
+    const policy: Policy = {
+      statement: Array.isArray(result.Statement)
+        ? result.Statement.map(mapKeys) as Array<Statement>
+        : mapKeys(result.Statement) as Statement,
+    };
+
+    if (result.ID) {
+      policy.id = result.ID;
+    }
+
+    if (result.Version) {
+      policy.version = result.Version;
+    }
+
+    return policy;
+
+    // deno-lint-ignore no-explicit-any
+    function mapKeys(obj: Record<string, unknown>): Record<string, any> {
+      const mapped: Record<string, unknown> = {};
+      for (const key in obj) {
+        const mappedKey = key.slice(0, 1).toLowerCase() + key.slice(1);
+        mapped[mappedKey] = obj[key];
+      }
+      return mapped;
+    }
+  }
+
+  #parseGetBucketPolicyStatusResult(xml: string): PolicyStatus {
+    const doc: Document = parseXML(xml);
+    const root = extractRoot(doc, "PolicyStatus");
+    const isPublic =
+      extractContent(root, "IsPublic ")?.toLowerCase() === "true";
+    return { isPublic };
   }
 }
