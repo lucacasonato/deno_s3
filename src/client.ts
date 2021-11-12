@@ -122,6 +122,15 @@ export class S3 {
     return this.getBucket(bucket);
   }
 
+  /**
+   * Deletes the S3 bucket. All objects (including all object versions and
+   * delete markers) in the bucket must be deleted before the bucket itself can
+   * be deleted.
+   *
+   * ```
+   * await s3.deleteBucket("my-bucket");
+   * ```
+   */
   async deleteBucket(
     bucket: string,
     options?: DeleteBucketOptions,
