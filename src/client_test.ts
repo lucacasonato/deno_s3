@@ -31,7 +31,7 @@ Deno.test({
 Deno.test({
   name: "[client] should create a new bucket",
   async fn() {
-    const bucket = await s3.createBucket("test.bucket", {
+    const bucket = await s3.createBucket("create-bucket-test", {
       acl: "public-read-write",
     });
     assert(bucket instanceof S3Bucket);
@@ -43,26 +43,26 @@ Deno.test({
     assertEquals(body, "test");
 
     await assertThrowsAsync(
-      () => s3.createBucket("test.bucket"),
+      () => s3.createBucket("create-bucket-test"),
       S3Error,
-      'Failed to create bucket "test.bucket": 409 Conflict',
+      'Failed to create bucket "create-bucket-test": 409 Conflict',
     );
 
     // teardown
     await bucket.deleteObject("test");
-    await s3.deleteBucket("test.bucket");
+    await s3.deleteBucket("create-bucket-test");
   },
 });
 
 Deno.test({
   name: "[client] should delete a bucket",
   async fn() {
-    await s3.createBucket("test.bucket");
-    await s3.deleteBucket("test.bucket");
+    await s3.createBucket("create-bucket-test");
+    await s3.deleteBucket("create-bucket-test");
     await assertThrowsAsync(
-      () => s3.deleteBucket("test.bucket"),
+      () => s3.deleteBucket("create-bucket-test"),
       S3Error,
-      'Failed to delete bucket "test.bucket": 404 Not Found',
+      'Failed to delete bucket "create-bucket-test": 404 Not Found',
     );
   },
 });
