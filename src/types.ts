@@ -615,7 +615,7 @@ export interface Owner {
   id?: string;
 }
 
-export interface ListBucketsResponses {
+export interface ListBucketsResponse {
   buckets: Array<Bucket>;
   owner: Owner;
 }

@@ -14,7 +14,7 @@ export type {
   GetObjectResponse,
   HeadObjectResponse,
   ListAllObjectsOptions,
-  ListBucketsResponses,
+  ListBucketsResponse,
   ListObjectsOptions,
   ListObjectsResponse,
   LocationConstraint,

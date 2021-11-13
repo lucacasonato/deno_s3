@@ -1,5 +1,5 @@
 import { AWSSignerV4, parseXML } from "../deps.ts";
-import type { CreateBucketOptions, ListBucketsResponses } from "./types.ts";
+import type { CreateBucketOptions, ListBucketsResponse } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -129,7 +129,7 @@ export class S3 {
     return this.getBucket(bucket);
   }
 
-  async listBuckets(): Promise<ListBucketsResponses> {
+  async listBuckets(): Promise<ListBucketsResponse> {
     const resp = await doRequest({
       host: this.#host,
       signer: this.#signer,
@@ -147,7 +147,7 @@ export class S3 {
     return this.#parseListBucketsResponseXml(xml);
   }
 
-  #parseListBucketsResponseXml(x: string): ListBucketsResponses {
+  #parseListBucketsResponseXml(x: string): ListBucketsResponse {
     const doc: Document = parseXML(x);
     const root = extractRoot(doc, "ListAllMyBucketsResult");
     const buckets = extractField(root, "Buckets")!;
