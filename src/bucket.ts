@@ -979,8 +979,8 @@ export class S3Bucket {
     return xml;
   }
 
-  #parseGetBucketVersioningResponseXml(x: string): VersioningConfiguration {
-    const doc: Document = parseXML(x);
+  #parseGetBucketVersioningResponseXml(xml: string): VersioningConfiguration {
+    const doc: Document = parseXML(xml);
     const root = extractRoot(doc, "VersioningConfiguration");
     const status = extractContent(root, "Status") as
       | VersioningStatus
@@ -1000,8 +1000,8 @@ export class S3Bucket {
     return config;
   }
 
-  #parseListObjectVersionsResponseXml(x: string): ListVersionsResult {
-    const doc: Document = parseXML(x);
+  #parseListObjectVersionsResponseXml(xml: string): ListVersionsResult {
+    const doc: Document = parseXML(xml);
     const root = extractRoot(doc, "ListVersionsResult");
 
     const commonPrefixFields = extractFields(root, "CommonPrefixes");
