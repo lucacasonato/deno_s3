@@ -606,16 +606,25 @@ export interface CreateBucketOptions extends CreateBucketConfiguration {
 }
 
 export interface Bucket {
+  /**
+   * Date the bucket was created. This date can change when making changes to
+   * your bucket, such as editing its bucket policy.
+   */
   creationDate?: Date;
+  /** The name of the bucket. */
   name?: string;
 }
 
 export interface Owner {
+  /** Container for the display name of the owner. */
   displayName?: string;
+  /** Container for the ID of the owner. */
   id?: string;
 }
 
 export interface ListBucketsResponse {
+  /** The list of buckets owned by the requestor. */
   buckets: Array<Bucket>;
+  /** The owner of the buckets listed. */
   owner: Owner;
 }

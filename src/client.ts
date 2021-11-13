@@ -129,6 +129,7 @@ export class S3 {
     return this.getBucket(bucket);
   }
 
+  /** Returns a list of all buckets owned by the authenticated sender of the request. */
   async listBuckets(): Promise<ListBucketsResponse> {
     const resp = await doRequest({
       host: this.#host,
