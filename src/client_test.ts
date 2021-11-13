@@ -1,6 +1,5 @@
-import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
+import { assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Error } from "./error.ts";
-import { S3Bucket } from "./bucket.ts";
 import { S3 } from "./client.ts";
 import { encoder } from "./request.ts";
 
@@ -15,7 +14,6 @@ Deno.test({
   name: "[client] should get an existing bucket",
   async fn() {
     const bucket = await s3.getBucket("test");
-    assert(bucket instanceof S3Bucket);
 
     // Check if returned bucket instance is working.
     await bucket.putObject("test", encoder.encode("test"));
@@ -31,10 +29,9 @@ Deno.test({
 Deno.test({
   name: "[client] should create a new bucket",
   async fn() {
-    const bucket = await s3.createBucket("test.bucket", {
+    const bucket = await s3.createBucket("create-bucket-test", {
       acl: "public-read-write",
     });
-    assert(bucket instanceof S3Bucket);
 
     // Check if returned bucket instance is working.
     await bucket.putObject("test", encoder.encode("test"));
@@ -42,21 +39,15 @@ Deno.test({
     const body = await new Response(resp?.body).text();
     assertEquals(body, "test");
 
+    await assertThrowsAsync(
+      () => s3.createBucket("create-bucket-test"),
+      S3Error,
+      'Failed to create bucket "create-bucket-test": 409 Conflict',
+    );
+
     // teardown
     await bucket.deleteObject("test");
     // @TODO: delete also bucket once s3.deleteBucket is implemented.
-  },
-});
-
-Deno.test({
-  name:
-    "[client] should throw when creating a bucket if the bucket already exists",
-  async fn() {
-    await assertThrowsAsync(
-      () => s3.createBucket("test.bucket"),
-      S3Error,
-      'Failed to create bucket "test.bucket": 409 Conflict',
-    );
   },
 });
 
