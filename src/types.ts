@@ -175,7 +175,7 @@ export interface HeadObjectResponse {
   /**
    * Amazon S3 can return this if your request involves a bucket that is
    * either a source or destination in a replication rule.
-   * */
+   */
   replicationStatus?: ReplicationStatus;
 
   /**
@@ -535,4 +535,251 @@ export interface DeleteObjectOptions {
 export interface DeleteObjectResponse {
   versionID?: string;
   deleteMarker: boolean;
+}
+
+export type LocationConstraint =
+  | "af-south-1"
+  | "ap-east-1"
+  | "ap-northeast-1"
+  | "ap-northeast-2"
+  | "ap-northeast-3"
+  | "ap-south-1"
+  | "ap-southeast-1"
+  | "ap-southeast-2"
+  | "ca-central-1"
+  | "cn-north-1"
+  | "cn-northwest-1"
+  | "EU"
+  | "Europe"
+  | "eu-central-1"
+  | "eu-north-1"
+  | "eu-south-1"
+  | "eu-west-1"
+  | "eu-west-2"
+  | "eu-west-3"
+  | "me-south-1"
+  | "sa-east-1"
+  | "us-east-1"
+  | "us-east-2"
+  | "us-gov-east-1"
+  | "us-gov-west-1"
+  | "us-west-1"
+  | "us-west-2";
+
+export interface CreateBucketConfiguration {
+  /**
+   * Specifies the Region where the bucket will be created. If you don't
+   * specify a Region, the bucket is created in the US East (N. Virginia)
+   * Region (us-east-1).
+   */
+  locationConstraint?: LocationConstraint;
+}
+
+export interface CreateBucketOptions extends CreateBucketConfiguration {
+  /** The canned ACL to apply to the bucket */
+  acl?:
+    | "private"
+    | "public-read"
+    | "public-read-write"
+    | "authenticated-read";
+
+  /** Specifies whether you want S3 Object Lock to be enabled for the new bucket. */
+  bucketObjectLockEnabled?: string;
+
+  /** Allows grantee the read, write, read ACP, and write ACP permissions on the bucket. */
+  grantFullControl?: string;
+
+  /** Allows grantee to list the objects in the bucket. */
+  grantRead?: string;
+
+  /** Allows grantee to read the bucket ACL. */
+  grantReadAcp?: string;
+
+  /**
+   * Allows grantee to create new objects in the bucket.
+   * For the bucket and object owners of existing objects, also allows deletions and overwrites of those objects.
+   */
+  grantWrite?: string;
+
+  /** Allows grantee to write the ACL for the applicable bucket. */
+  grantWriteAcp?: string;
+}
+
+export interface Bucket {
+  creationDate?: Date;
+  name?: string;
+}
+
+export interface Owner {
+  displayName?: string;
+  id?: string;
+}
+
+export interface ListBucketsResponses {
+  buckets: Array<Bucket>;
+  owner: Owner;
+}
+
+/**
+ * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html
+ */
+export interface Statement {
+  /**
+   * You can provide an optional identifier, Sid (statement ID) for the policy statement.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_sid.html
+   */
+  sid?: string;
+
+  /**
+   * The Effect element is required and specifies whether the statement results
+   * an allow or an explicit deny.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_effect.html
+   */
+  effect: "Allow" | "Deny";
+
+  /**
+   * The account or user who is allowed access to the actions and resources in
+   * the statement. In a bucket policy, the principal is the user, account,
+   * service, or other entity that is the recipient of this permission.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+   */
+  principal?: string | Record<string, string | Array<string>>;
+
+  /**
+   * Use the NotPrincipal element to specify the IAM user, federated user,
+   * IAM role, AWS account, AWS service, or other principal that is not allowed
+   * or denied access to a resource.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notprincipal.html
+   */
+  notPrincipal?: string | Record<string, string | Array<string>>;
+
+  /**
+   * The Action element describes the specific action or actions that will be
+   * allowed or denied. Statements must include either an Action or NotAction
+   * element.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_action.html
+   */
+  action?: string | Array<string>;
+
+  /**
+   * NotAction is an advanced policy element that explicitly matches everything
+   * except the specified list of actions. Using NotAction can result in a
+   * shorter policy by listing only a few actions that should not match, rather
+   * than including a long list of actions that will match.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notaction.html
+   */
+  notAction?: string | Array<string>;
+
+  /**
+   * The Resource element specifies the object or objects that the statement covers.
+   * Statements must include either a Resource or a NotResource element.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html
+   */
+  resource?: string | Array<string>;
+
+  /**
+   * NotResource is an advanced policy element that explicitly matches every
+   * resource except those specified. Using NotResource can result in a shorter
+   * policy by listing only a few resources that should not match, rather than
+   * including a long list of resources that will match.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_notresource.html
+   */
+  notResource?: string | Array<string>;
+
+  /**
+   * The Condition element (or Condition block) lets you specify conditions for
+   * when a policy is in effect.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition.html
+   */
+  condition?: Record<string, Record<string, string | Array<string>>>;
+}
+
+/**
+ * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html
+ */
+export interface Policy {
+  /**
+   * The Version policy element specifies the language syntax rules that are to
+   * be used to process a policy.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_version.html
+   */
+  version?: "2012-10-17" | "2008-10-17";
+
+  /**
+   * The id element specifies an optional identifier for the policy. The ID is
+   * used differently in different services.
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_id.html
+   */
+  id?: string;
+
+  /**
+   * The policy statement(s).
+   *
+   * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_statement.html
+   */
+  statement: Statement | Array<Statement>;
+}
+
+export interface PutBucketPolicyOptions {
+  /**
+   * Set this parameter to true to confirm that you want to remove your
+   * permissions to change this bucket policy in the future.
+   */
+  confirmRemoveSelfBucketAccess?: boolean;
+
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+
+  /** The bucket policy. */
+  policy: Policy;
+}
+
+export interface GetBucketPolicyOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface DeleteBucketPolicyOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface GetBucketPolicyStatusOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
+export interface PolicyStatus {
+  /**
+   * The policy status for this bucket. TRUE indicates that this bucket is
+   * public. FALSE indicates that the bucket is not public.
+   */
+  isPublic: boolean;
 }

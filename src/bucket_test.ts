@@ -1,5 +1,7 @@
-import { assert, assertEquals } from "../test_deps.ts";
+import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3Error } from "./error.ts";
+import type { Policy } from "./types.ts";
 
 const bucket = new S3Bucket({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
@@ -11,8 +13,27 @@ const bucket = new S3Bucket({
 
 const encoder = new TextEncoder();
 
+const policy: Policy = {
+  version: "2012-10-17",
+  id: "test",
+  statement: [
+    {
+      effect: "Allow",
+      principal: {
+        AWS: ["111122223333", "444455556666"],
+      },
+      action: [
+        "s3:PutObject",
+      ],
+      resource: [
+        "arn:aws:s3:::*",
+      ],
+    },
+  ],
+};
+
 Deno.test({
-  name: "put object",
+  name: "[bucket] put object",
   async fn() {
     await bucket.putObject("test", encoder.encode("Test1"), {
       contentType: "text/plain",
@@ -24,7 +45,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with % in key",
+  name: "[bucket] put object with % in key",
   async fn() {
     await bucket.putObject(
       "ltest/versions/1.0.0/raw/fixtures/%",
@@ -38,7 +59,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with @ in key",
+  name: "[bucket] put object with @ in key",
   async fn() {
     await bucket.putObject(
       "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
@@ -54,7 +75,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with 日本語 in key",
+  name: "[bucket] put object with 日本語 in key",
   async fn() {
     await bucket.putObject(
       "servest/versions/1.0.0/raw/fixtures/日本語.txt",
@@ -68,7 +89,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object success",
+  name: "[bucket] head object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -92,14 +113,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object not found",
+  name: "[bucket] head object not found",
   async fn() {
     assertEquals(await bucket.headObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "get object success",
+  name: "[bucket] get object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -125,14 +146,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "get object not found",
+  name: "[bucket] get object not found",
   async fn() {
     assertEquals(await bucket.getObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "delete object",
+  name: "[bucket] delete object",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("test"));
@@ -149,7 +170,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "copy object",
+  name: "[bucket] copy object",
   async fn() {
     await bucket.putObject("test3", encoder.encode("Test1"));
     await bucket
@@ -172,7 +193,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "list objects",
+  name: "[bucket] list objects",
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -255,7 +276,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "empty bucket",
+  name: "[bucket] empty bucket",
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -280,5 +301,53 @@ Deno.test({
     deleted.sort();
     keys.sort();
     assertEquals(deleted, keys);
+  },
+});
+
+Deno.test({
+  name: "[bucket] should put a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assertEquals(resp, policy);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should delete a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assert(resp);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+
+    await assertThrowsAsync(
+      () => bucket.getBucketPolicy(),
+      S3Error,
+      "Failed to get bucket policy: 404 Not Found",
+    );
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get the bucket policy status",
+  async fn() {
+    const resp = await bucket.getBucketPolicyStatus();
+    assertEquals(resp, { isPublic: false });
   },
 });
