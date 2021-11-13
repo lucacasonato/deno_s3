@@ -12,7 +12,7 @@ const s3 = new S3({
 });
 
 Deno.test({
-  name: "[client] should create an instance from an existing bucket",
+  name: "[client] should get a bucket instance",
   async fn() {
     const bucket = await s3.getBucket("test");
     assert(bucket instanceof S3Bucket);
@@ -29,7 +29,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "[client] should get a bucket",
+  name: "[client] should determine if a bucket exists",
   async fn() {
     const bucket = await s3.headBucket("test");
 
