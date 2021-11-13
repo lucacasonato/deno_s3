@@ -1,4 +1,4 @@
-import { assertEquals, assertThrowsAsync } from "../test_deps.ts";
+import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Error } from "./error.ts";
 import { S3 } from "./client.ts";
 import { encoder } from "./request.ts";
@@ -56,7 +56,7 @@ Deno.test({
   async fn() {
     const { buckets, owner } = await s3.listBuckets();
     assert(buckets.length, "no buckets available");
-    assertEquals(buckets[0].name, "test");
+    assertEquals(buckets[0].name, "create-bucket-test");
     assert(
       buckets[0].creationDate instanceof Date,
       "creationDate is not of type Date",
