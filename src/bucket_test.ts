@@ -5,23 +5,22 @@ import {
   assertThrowsAsync,
 } from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3, S3Config } from "./client.ts";
 import { S3Error } from "./error.ts";
 import type { Policy } from "./types.ts";
 
-const bucket = new S3Bucket({
+const config: S3Config = {
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
-  bucket: "test",
   region: "us-east-1",
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
-});
+};
 
-const versioningBucket = new S3Bucket({
-  accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
-  secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
-  bucket: "versioning-test",
-  region: "us-east-1",
-  endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
+const s3 = new S3(config);
+
+const bucket = new S3Bucket({
+  ...config,
+  bucket: "test",
 });
 
 const encoder = new TextEncoder();
@@ -368,6 +367,7 @@ Deno.test({
 Deno.test({
   name: "[bucket] should put a bucket versioning configuration",
   async fn() {
+    const versioningBucket = await s3.createBucket("test2");
     await versioningBucket.putBucketVersioning({ status: "Enabled" });
 
     let resp = await versioningBucket.getBucketVersioning();
@@ -378,12 +378,15 @@ Deno.test({
 
     resp = await versioningBucket.getBucketVersioning();
     assertEquals(resp, { status: "Suspended" });
+
+    await s3.deleteBucket("test2");
   },
 });
 
 Deno.test({
   name: "[bucket] should list object versions",
   async fn() {
+    const versioningBucket = await s3.createBucket("test2");
     await versioningBucket.putBucketVersioning({ status: "Enabled" });
 
     await versioningBucket.putObject("test", encoder.encode("test1"));
@@ -398,7 +401,7 @@ Deno.test({
       isTruncated: false,
       keyMarker: undefined,
       maxKeys: 1000,
-      name: "versioning-test",
+      name: "test2",
       nextKeyMarker: undefined,
       nextVersionIdMarker: undefined,
       prefix: undefined,
@@ -459,5 +462,7 @@ Deno.test({
         });
       }
     }
+
+    await s3.deleteBucket("test2");
   },
 });
