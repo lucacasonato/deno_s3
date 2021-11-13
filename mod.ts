@@ -8,6 +8,7 @@ export type {
   CopyObjectResponse,
   CreateBucketConfiguration,
   CreateBucketOptions,
+  DeleteBucketOptions,
   DeleteBucketPolicyOptions,
   DeleteMarkerEntry,
   DeleteObjectOptions,

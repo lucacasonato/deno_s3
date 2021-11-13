@@ -597,12 +597,22 @@ export interface CreateBucketOptions extends CreateBucketConfiguration {
 
   /**
    * Allows grantee to create new objects in the bucket.
-   * For the bucket and object owners of existing objects, also allows deletions and overwrites of those objects.
+   * For the bucket and object owners of existing objects, also allows deletions
+   * and overwrites of those objects.
    */
   grantWrite?: string;
 
   /** Allows grantee to write the ACL for the applicable bucket. */
   grantWriteAcp?: string;
+}
+
+export interface DeleteBucketOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
 }
 
 export interface Bucket {
