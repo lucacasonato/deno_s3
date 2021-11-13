@@ -1,16 +1,24 @@
-import {
-  AWSSignerV4,
-  decodeXMLEntities,
-  parseXML,
-  pooledMap,
-  sha256Hex,
-} from "../deps.ts";
+import { AWSSignerV4, md5, parseXML, pooledMap } from "../deps.ts";
 import type { S3Config } from "./client.ts";
+import {
+  DeleteMarkerEntry,
+  GetBucketVersioningOptions,
+  ListObjectVersionsOptions,
+  ListVersionsResult,
+  MfaDelete,
+  ObjectVersion,
+  PutBucketVersioningOptions,
+  VersioningConfiguration,
+  VersioningStatus,
+} from "./types.ts";
 import type {
   CommonPrefix,
   CopyObjectOptions,
+  DeleteBucketPolicyOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
+  GetBucketPolicyOptions,
+  GetBucketPolicyStatusOptions,
   GetObjectOptions,
   GetObjectResponse,
   HeadObjectResponse,
@@ -18,18 +26,27 @@ import type {
   ListObjectsOptions,
   ListObjectsResponse,
   LockMode,
+  Policy,
+  PolicyStatus,
+  PutBucketPolicyOptions,
   PutObjectOptions,
   PutObjectResponse,
   ReplicationStatus,
   S3Object,
+  Statement,
   StorageClass,
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-
-interface Params {
-  [key: string]: string;
-}
+import { doRequest, encoder, encodeURIS3 } from "./request.ts";
+import type { Params } from "./request.ts";
+import type { Document } from "./xml.ts";
+import {
+  extractContent,
+  extractField,
+  extractFields,
+  extractRoot,
+} from "./xml.ts";
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
@@ -38,7 +55,6 @@ export interface S3BucketConfig extends S3Config {
 export class S3Bucket {
   #signer: Signer;
   #host: string;
-  #bucket: string;
 
   constructor(config: S3BucketConfig) {
     this.#signer = new AWSSignerV4(config.region, {
@@ -46,39 +62,11 @@ export class S3Bucket {
       awsSecretKey: config.secretKey,
       sessionToken: config.sessionToken,
     });
-    this.#bucket = config.bucket;
     this.#host = config.endpointURL
       ? new URL(`/${config.bucket}/`, config.endpointURL).toString()
       : config.bucket.indexOf(".") >= 0
       ? `https://s3.${config.region}.amazonaws.com/${config.bucket}/`
       : `https://${config.bucket}.s3.${config.region}.amazonaws.com/`;
-  }
-
-  private async _doRequest(
-    path: string,
-    params: Params,
-    method: string,
-    headers: Params,
-    body?: Uint8Array | undefined,
-  ): Promise<Response> {
-    const url = path == "/"
-      ? new URL(this.#host)
-      : new URL(encodeURIS3(path), this.#host);
-    for (const key in params) {
-      url.searchParams.set(key, params[key]);
-    }
-    const request = new Request(url.toString(), {
-      headers,
-      method,
-      body,
-    });
-
-    const signedRequest = await this.#signer.sign("s3", request);
-    signedRequest.headers.set("x-amz-content-sha256", sha256Hex(body ?? ""));
-    if (body) {
-      signedRequest.headers.set("content-length", body.length.toFixed(0));
-    }
-    return fetch(signedRequest);
   }
 
   async headObject(
@@ -120,7 +108,14 @@ export class S3Bucket {
       params["VersionId"] = options.versionId;
     }
 
-    const res = await this._doRequest(key, params, "HEAD", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "HEAD",
+      params,
+      headers,
+    });
     if (res.body) {
       await res.arrayBuffer();
     }
@@ -218,7 +213,14 @@ export class S3Bucket {
       params["VersionId"] = options.versionId;
     }
 
-    const res = await this._doRequest(key, params, "GET", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "GET",
+      params,
+      headers,
+    });
     if (res.status === 404) {
       // clean up http body
       await res.arrayBuffer();
@@ -299,7 +301,13 @@ export class S3Bucket {
       params["continuation-token"] = options.continuationToken;
     }
 
-    const res = await this._doRequest(`/`, params, "GET", headers);
+    const res = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      params,
+      headers,
+    });
     if (res.status === 404) {
       // clean up http body
       await res.arrayBuffer();
@@ -341,9 +349,7 @@ export class S3Bucket {
     }
 
     const parsed = {
-      isTruncated: extractContent(root, "IsTruncated") === "true"
-        ? true
-        : false,
+      isTruncated: extractContent(root, "IsTruncated") === "true",
       contents: root.children
         .filter((node) => node.name === "Contents")
         .map<S3Object>((s3obj) => {
@@ -464,7 +470,14 @@ export class S3Bucket {
       }
     }
 
-    const resp = await this._doRequest(key, {}, "PUT", headers, body);
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "PUT",
+      headers,
+      body,
+    });
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
@@ -557,7 +570,13 @@ export class S3Bucket {
       headers["x-amz-tagging-directive"] = options.taggingDirective;
     }
 
-    const resp = await this._doRequest(destination, {}, "PUT", headers);
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: destination,
+      method: "PUT",
+      headers,
+    });
     if (resp.status !== 200) {
       throw new S3Error(
         `Failed to copy object: ${resp.status} ${resp.statusText}`,
@@ -580,7 +599,13 @@ export class S3Bucket {
     if (options?.versionId) {
       params.versionId = options.versionId;
     }
-    const resp = await this._doRequest(key, params, "DELETE", {});
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: key,
+      method: "DELETE",
+      params,
+    });
     if (resp.status !== 204) {
       throw new S3Error(
         `Failed to put object: ${resp.status} ${resp.statusText}`,
@@ -616,72 +641,438 @@ export class S3Bucket {
     }
     return deleted;
   }
-}
 
-function encodeURIS3(input: string): string {
-  let result = "";
-  for (const ch of input) {
-    if (
-      (ch >= "A" && ch <= "Z") ||
-      (ch >= "a" && ch <= "z") ||
-      (ch >= "0" && ch <= "9") ||
-      ch == "_" ||
-      ch == "-" ||
-      ch == "~" ||
-      ch == "."
-    ) {
-      result += ch;
-    } else if (ch == "/") {
-      result += "/";
-    } else {
-      result += stringToHex(ch);
+  /**
+   * Applies an Amazon S3 bucket policy to an Amazon S3 bucket. If you are using
+   * an identity other than the root user of the AWS account that owns the
+   * bucket, the calling identity must have the PutBucketPolicy permissions on
+   * the specified bucket and belong to the bucket owner's account in order to
+   * use this operation.
+   */
+  async putBucketPolicy(
+    options: PutBucketPolicyOptions,
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+    const json = JSON.stringify(options.policy);
+    const body = encoder.encode(json);
+
+    headers["Content-MD5"] = md5(json);
+
+    if (typeof options.confirmRemoveSelfBucketAccess !== "undefined") {
+      headers["x-amz-confirm-remove-self-bucket-access"] = options
+        .confirmRemoveSelfBucketAccess.toString();
     }
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policy"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "PUT",
+      headers,
+      params,
+      body,
+    });
+
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to create bucket policy: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
   }
-  return result;
-}
 
-const encoder = new TextEncoder();
+  /**
+   * Returns the policy of a specified bucket. If you are using an identity
+   * other than the root user of the AWS account that owns the bucket, the
+   * calling identity must have the GetBucketPolicy permissions on the specified
+   * bucket and belong to the bucket owner's account in order to use this
+   * operation.
+   */
+  async getBucketPolicy(
+    options?: GetBucketPolicyOptions,
+  ): Promise<Policy> {
+    const headers: Params = {};
+    const params: Params = {};
 
-function stringToHex(input: string) {
-  return [...encoder.encode(input)]
-    .map((s) => "%" + s.toString(16))
-    .join("")
-    .toUpperCase();
-}
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
 
-interface Document {
-  declaration: {
-    attributes: Record<string, unknown>;
-  };
-  root: Xml | undefined;
-}
+    params["policy"] = "true";
 
-interface Xml {
-  name: string;
-  attributes: unknown;
-  children: Xml[];
-  content?: string;
-}
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
 
-function extractRoot(doc: Document, name: string): Xml {
-  if (!doc.root || doc.root.name !== name) {
-    throw new S3Error(
-      `Malformed XML document. Missing ${name} field.`,
-      JSON.stringify(doc, undefined, 2),
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket policy: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    const result = JSON.parse(await resp.text());
+
+    return this.#parseGetBucketPolicyResult(result);
+  }
+
+  /**
+   * This implementation of the DELETE action uses the policy subresource to
+   * delete the policy of a specified bucket. If you are using an identity other
+   * than the root user of the AWS account that owns the bucket, the calling
+   * identity must have the DeleteBucketPolicy permissions on the specified
+   * bucket and belong to the bucket owner's account to use this operation.
+   */
+  async deleteBucketPolicy(
+    options?: DeleteBucketPolicyOptions,
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policy"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "DELETE",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 204) {
+      throw new S3Error(
+        `Failed to delete bucket policy": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
+  }
+
+  /**
+   * Retrieves the policy status for an Amazon S3 bucket, indicating whether the
+   * bucket is public. In order to use this operation, you must have the
+   * s3:GetBucketPolicyStatus permission.
+   */
+  async getBucketPolicyStatus(
+    options?: GetBucketPolicyStatusOptions,
+  ): Promise<PolicyStatus> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["policyStatus"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket policy status": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketPolicyStatusResult(
+      await resp.text(),
     );
   }
-  return doc.root;
-}
 
-function extractField(node: Xml, name: string): Xml | undefined {
-  return node.children.find((node) => node.name === name);
-}
+  async putBucketVersioning(
+    options: PutBucketVersioningOptions = {},
+  ): Promise<void> {
+    const headers: Params = {};
+    const params: Params = {};
 
-function extractContent(node: Xml, name: string): string | undefined {
-  const field = extractField(node, name);
-  const content = field?.content;
-  if (content === undefined) {
-    return content;
+    if (options.mfa) {
+      headers["x-amz-mfa"] = options.mfa;
+    }
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    const xml = this.#parsePutBucketVersioningRequestXml(options);
+    headers["Content-MD5"] = md5(xml);
+    const body = encoder.encode(xml);
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "PUT",
+      headers,
+      params,
+      body,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to update bucket versioning configuration": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    // clean up http body
+    await resp.arrayBuffer();
   }
-  return decodeXMLEntities(content);
+
+  async getBucketVersioning(
+    options: GetBucketVersioningOptions = {},
+  ): Promise<VersioningConfiguration> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versioning"] = "true";
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket versioning configuration: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseGetBucketVersioningResponseXml(
+      await resp.text(),
+    );
+  }
+
+  async listObjectVersions(
+    options?: ListObjectVersionsOptions,
+  ): Promise<ListVersionsResult> {
+    const headers: Params = {};
+    const params: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    params["versions"] = "true";
+
+    if (options?.delimiter) {
+      params["delimiter"] = options.delimiter;
+    }
+    if (options?.encodingType) {
+      params["encoding-type"] = options.encodingType;
+    }
+    if (options?.keyMarker) {
+      params["key-marker"] = options.keyMarker;
+    }
+    if (options?.maxKeys) {
+      params["max-keys"] = options.maxKeys;
+    }
+    if (options?.prefix) {
+      params["prefix"] = options.prefix;
+    }
+    if (options?.versionIdMarker) {
+      params["version-id-marker"] = options.versionIdMarker;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      method: "GET",
+      headers,
+      params,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to list object versions: ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.#parseListObjectVersionsResponseXml(
+      await resp.text(),
+    );
+  }
+
+  // deno-lint-ignore no-explicit-any
+  #parseGetBucketPolicyResult(result: Record<string, any>): Policy {
+    const policy: Policy = {
+      statement: Array.isArray(result.Statement)
+        ? result.Statement.map(mapKeys) as Array<Statement>
+        : mapKeys(result.Statement) as Statement,
+    };
+
+    if (result.ID) {
+      policy.id = result.ID;
+    }
+
+    if (result.Version) {
+      policy.version = result.Version;
+    }
+
+    return policy;
+
+    // deno-lint-ignore no-explicit-any
+    function mapKeys(obj: Record<string, unknown>): Record<string, any> {
+      const mapped: Record<string, unknown> = {};
+      for (const key in obj) {
+        const mappedKey = key.slice(0, 1).toLowerCase() + key.slice(1);
+        mapped[mappedKey] = obj[key];
+      }
+      return mapped;
+    }
+  }
+
+  #parseGetBucketPolicyStatusResult(xml: string): PolicyStatus {
+    const doc: Document = parseXML(xml);
+    const root = extractRoot(doc, "PolicyStatus");
+    const isPublic =
+      extractContent(root, "IsPublic ")?.toLowerCase() === "true";
+    return { isPublic };
+  }
+
+  #parsePutBucketVersioningRequestXml(
+    options: PutBucketVersioningOptions,
+  ): string {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<VersioningConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">\n';
+
+    if (options?.status) {
+      xml += `  <Status>${options.status}</Status>\n`;
+    }
+    if (options?.mfaDelete) {
+      xml += `  <MfaDelete>${options.mfaDelete}</MfaDelete>\n`;
+    }
+    xml += "</VersioningConfiguration>";
+
+    return xml;
+  }
+
+  #parseGetBucketVersioningResponseXml(xml: string): VersioningConfiguration {
+    const doc: Document = parseXML(xml);
+    const root = extractRoot(doc, "VersioningConfiguration");
+    const status = extractContent(root, "Status") as
+      | VersioningStatus
+      | undefined;
+    const mfaDelete = extractContent(root, "MfaDelete") as
+      | MfaDelete
+      | undefined;
+    const config: VersioningConfiguration = {};
+
+    if (status) {
+      config.status = status;
+    }
+    if (mfaDelete) {
+      config.mfaDelete = mfaDelete;
+    }
+
+    return config;
+  }
+
+  #parseListObjectVersionsResponseXml(xml: string): ListVersionsResult {
+    const doc: Document = parseXML(xml);
+    const root = extractRoot(doc, "ListVersionsResult");
+
+    const commonPrefixFields = extractFields(root, "CommonPrefixes");
+    const commonPrefixes: Array<CommonPrefix> = commonPrefixFields.map(
+      (commonPrefixField) => ({
+        prefix: extractContent(commonPrefixField, "Prefix"),
+      }),
+    );
+
+    const deleteMarkerFields = extractFields(root, "DeleteMarker");
+    const deleteMarkers: Array<DeleteMarkerEntry> = deleteMarkerFields.map(
+      (deleteMarkerField) => {
+        const lastModifiedField = extractContent(
+          deleteMarkerField,
+          "LastModified",
+        );
+        const ownerField = extractField(deleteMarkerField, "Owner");
+        return {
+          prefix: extractContent(deleteMarkerField, "Prefix"),
+          isLatest: extractContent(deleteMarkerField, "IsLatest") === "true",
+          key: extractContent(deleteMarkerField, "Key"),
+          lastModified: lastModifiedField
+            ? new Date(lastModifiedField)
+            : undefined,
+          owner: ownerField && {
+            displayName: extractContent(ownerField, "DisplayName"),
+            id: extractContent(ownerField, "ID"),
+          },
+          versionId: extractContent(deleteMarkerField, "VersionId"),
+        };
+      },
+    );
+
+    const versionFields = extractFields(root, "Version");
+    const versions: Array<ObjectVersion> = versionFields.map((versionField) => {
+      const lastModifiedField = extractContent(versionField, "LastModified");
+      const ownerField = extractField(versionField, "Owner");
+      return {
+        prefix: extractContent(versionField, "Prefix"),
+        eTag: extractContent(versionField, "ETag"),
+        isLatest: extractContent(versionField, "IsLatest") === "true",
+        key: extractContent(versionField, "Key"),
+        lastModified: lastModifiedField
+          ? new Date(lastModifiedField)
+          : undefined,
+        owner: ownerField && {
+          displayName: extractContent(ownerField, "DisplayName"),
+          id: extractContent(ownerField, "ID"),
+        },
+        size: Number(extractContent(versionField, "Size")),
+        storageClass: extractContent(versionField, "StorageClass") as
+          | "STANDARD"
+          | undefined,
+        versionId: extractContent(versionField, "VersionId"),
+      };
+    });
+
+    return {
+      commonPrefixes,
+      deleteMarkers,
+      delimiter: extractContent(root, "Delimiter"),
+      encodingType: extractContent(root, "EncodingType") as "url" | undefined,
+      isTruncated: extractContent(root, "IsTruncated") === "true",
+      keyMarker: extractContent(root, "KeyMarker"),
+      maxKeys: Number(extractContent(root, "MaxKeys")),
+      name: extractContent(root, "Name"),
+      nextKeyMarker: extractContent(root, "NextKeyMarker"),
+      nextVersionIdMarker: extractContent(root, "NextVersionIdMarker"),
+      prefix: extractContent(root, "Prefix"),
+      versions,
+      versionIdMarker: extractContent(root, "VersionIdMarker"),
+    };
+  }
 }

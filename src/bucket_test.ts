@@ -1,18 +1,51 @@
-import { assert, assertEquals } from "../test_deps.ts";
+import {
+  assert,
+  assertEquals,
+  assertObjectMatch,
+  assertThrowsAsync,
+} from "../test_deps.ts";
 import { S3Bucket } from "./bucket.ts";
+import { S3, S3Config } from "./client.ts";
+import { S3Error } from "./error.ts";
+import type { Policy } from "./types.ts";
 
-const bucket = new S3Bucket({
+const config: S3Config = {
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,
   secretKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
-  bucket: "test",
   region: "us-east-1",
   endpointURL: Deno.env.get("S3_ENDPOINT_URL"),
+};
+
+const s3 = new S3(config);
+
+const bucket = new S3Bucket({
+  ...config,
+  bucket: "test",
 });
 
 const encoder = new TextEncoder();
 
+const policy: Policy = {
+  version: "2012-10-17",
+  id: "test",
+  statement: [
+    {
+      effect: "Allow",
+      principal: {
+        AWS: ["111122223333", "444455556666"],
+      },
+      action: [
+        "s3:PutObject",
+      ],
+      resource: [
+        "arn:aws:s3:::*",
+      ],
+    },
+  ],
+};
+
 Deno.test({
-  name: "put object",
+  name: "[bucket] put object",
   async fn() {
     await bucket.putObject("test", encoder.encode("Test1"), {
       contentType: "text/plain",
@@ -24,7 +57,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with % in key",
+  name: "[bucket] put object with % in key",
   async fn() {
     await bucket.putObject(
       "ltest/versions/1.0.0/raw/fixtures/%",
@@ -38,7 +71,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with @ in key",
+  name: "[bucket] put object with @ in key",
   async fn() {
     await bucket.putObject(
       "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
@@ -54,7 +87,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with 日本語 in key",
+  name: "[bucket] put object with 日本語 in key",
   async fn() {
     await bucket.putObject(
       "servest/versions/1.0.0/raw/fixtures/日本語.txt",
@@ -68,7 +101,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object success",
+  name: "[bucket] head object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -92,14 +125,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object not found",
+  name: "[bucket] head object not found",
   async fn() {
     assertEquals(await bucket.headObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "get object success",
+  name: "[bucket] get object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -125,14 +158,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "get object not found",
+  name: "[bucket] get object not found",
   async fn() {
     assertEquals(await bucket.getObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "delete object",
+  name: "[bucket] delete object",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("test"));
@@ -149,7 +182,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "copy object",
+  name: "[bucket] copy object",
   async fn() {
     await bucket.putObject("test3", encoder.encode("Test1"));
     await bucket
@@ -172,7 +205,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "list objects",
+  name: "[bucket] list objects",
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -255,7 +288,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "empty bucket",
+  name: "[bucket] empty bucket",
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -280,5 +313,156 @@ Deno.test({
     deleted.sort();
     keys.sort();
     assertEquals(deleted, keys);
+  },
+});
+
+Deno.test({
+  name: "[bucket] should put a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assertEquals(resp, policy);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+  },
+});
+
+Deno.test({
+  name: "[bucket] should delete a bucket policy",
+  async fn() {
+    await bucket.putBucketPolicy({ policy });
+    const resp = await bucket.getBucketPolicy();
+    assert(resp);
+
+    // teardown
+    await bucket.deleteBucketPolicy();
+
+    await assertThrowsAsync(
+      () => bucket.getBucketPolicy(),
+      S3Error,
+      "Failed to get bucket policy: 404 Not Found",
+    );
+  },
+});
+
+Deno.test({
+  name: "[bucket] should get the bucket policy status",
+  async fn() {
+    const resp = await bucket.getBucketPolicyStatus();
+    assertEquals(resp, { isPublic: false });
+  },
+});
+
+Deno.test({
+  name: "[bucket] should put a bucket versioning configuration",
+  async fn() {
+    const versioningBucket = await s3.createBucket("test2");
+    await versioningBucket.putBucketVersioning({ status: "Enabled" });
+
+    let resp = await versioningBucket.getBucketVersioning();
+    assertEquals(resp, { status: "Enabled" });
+
+    // teardown
+    await versioningBucket.putBucketVersioning({ status: "Suspended" });
+
+    resp = await versioningBucket.getBucketVersioning();
+    assertEquals(resp, { status: "Suspended" });
+
+    await s3.deleteBucket("test2");
+  },
+});
+
+Deno.test({
+  name: "[bucket] should list object versions",
+  async fn() {
+    const versioningBucket = await s3.createBucket("test2");
+    await versioningBucket.putBucketVersioning({ status: "Enabled" });
+
+    await versioningBucket.putObject("test", encoder.encode("test1"));
+    await versioningBucket.deleteObject("test");
+    await versioningBucket.putObject("test", encoder.encode("test2"));
+
+    const resp = await versioningBucket.listObjectVersions();
+
+    assertObjectMatch(resp, {
+      delimiter: undefined,
+      encodingType: undefined,
+      isTruncated: false,
+      keyMarker: undefined,
+      maxKeys: 1000,
+      name: "test2",
+      nextKeyMarker: undefined,
+      nextVersionIdMarker: undefined,
+      prefix: undefined,
+      versionIdMarker: undefined,
+    });
+
+    assert(resp.versions);
+    assert(resp.deleteMarkers);
+    assertEquals(resp.versions.length, 2);
+    assertEquals(resp.deleteMarkers.length, 1);
+
+    assertObjectMatch(resp.deleteMarkers[0], {
+      prefix: undefined,
+      isLatest: false,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+    });
+
+    assertObjectMatch(resp.versions[0], {
+      isLatest: true,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+      prefix: undefined,
+      size: 5,
+      storageClass: "STANDARD",
+    });
+
+    assertObjectMatch(resp.versions[1], {
+      isLatest: false,
+      key: "test",
+      owner: {
+        displayName: "minio",
+      },
+      prefix: undefined,
+      size: 5,
+      storageClass: "STANDARD",
+    });
+
+    // teardown
+    await versioningBucket.putBucketVersioning({ status: "Suspended" });
+
+    if (resp.versions) {
+      for (const version of resp.versions) {
+        await versioningBucket.deleteObject("test", {
+          versionId: version.versionId,
+        });
+      }
+    }
+
+    if (resp.deleteMarkers) {
+      for (const deleteMarker of resp.deleteMarkers) {
+        await versioningBucket.deleteObject("test", {
+          versionId: deleteMarker.versionId,
+        });
+      }
+    }
+
+    await s3.deleteBucket("test2");
   },
 });
