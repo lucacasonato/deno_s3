@@ -10,6 +10,9 @@ test:
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://test || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 mb s3://test
 
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rm --recursive s3://create-bucket-test || true
+	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://create-bucket-test || true
+
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3api delete-objects \
 		--bucket versioning-test \
 		--delete "$$(aws --endpoint-url=${S3_ENDPOINT_URL} s3api list-object-versions \
@@ -18,9 +21,6 @@ test:
 						 --query='{Objects: *[].{Key:Key,VersionId:VersionId}}' | cat)" | cat || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://versioning-test || true
 	aws --endpoint-url=${S3_ENDPOINT_URL} s3 mb s3://versioning-test
-
-	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rm --recursive s3://test.bucket || true
-	aws --endpoint-url=${S3_ENDPOINT_URL} s3 rb s3://test.bucket || true
 
 	deno test -A ${DENO_ARGS}
 

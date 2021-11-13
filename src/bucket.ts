@@ -642,6 +642,13 @@ export class S3Bucket {
     return deleted;
   }
 
+  /**
+   * Applies an Amazon S3 bucket policy to an Amazon S3 bucket. If you are using
+   * an identity other than the root user of the AWS account that owns the
+   * bucket, the calling identity must have the PutBucketPolicy permissions on
+   * the specified bucket and belong to the bucket owner's account in order to
+   * use this operation.
+   */
   async putBucketPolicy(
     options: PutBucketPolicyOptions,
   ): Promise<void> {
@@ -682,6 +689,13 @@ export class S3Bucket {
     await resp.arrayBuffer();
   }
 
+  /**
+   * Returns the policy of a specified bucket. If you are using an identity
+   * other than the root user of the AWS account that owns the bucket, the
+   * calling identity must have the GetBucketPolicy permissions on the specified
+   * bucket and belong to the bucket owner's account in order to use this
+   * operation.
+   */
   async getBucketPolicy(
     options?: GetBucketPolicyOptions,
   ): Promise<Policy> {
@@ -714,6 +728,13 @@ export class S3Bucket {
     return this.#parseGetBucketPolicyResult(result);
   }
 
+  /**
+   * This implementation of the DELETE action uses the policy subresource to
+   * delete the policy of a specified bucket. If you are using an identity other
+   * than the root user of the AWS account that owns the bucket, the calling
+   * identity must have the DeleteBucketPolicy permissions on the specified
+   * bucket and belong to the bucket owner's account to use this operation.
+   */
   async deleteBucketPolicy(
     options?: DeleteBucketPolicyOptions,
   ): Promise<void> {
@@ -745,6 +766,11 @@ export class S3Bucket {
     await resp.arrayBuffer();
   }
 
+  /**
+   * Retrieves the policy status for an Amazon S3 bucket, indicating whether the
+   * bucket is public. In order to use this operation, you must have the
+   * s3:GetBucketPolicyStatus permission.
+   */
   async getBucketPolicyStatus(
     options?: GetBucketPolicyStatusOptions,
   ): Promise<PolicyStatus> {
