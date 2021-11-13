@@ -1,6 +1,5 @@
-import { assert, assertEquals, assertThrowsAsync } from "../test_deps.ts";
+import { assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Error } from "./error.ts";
-import { S3Bucket } from "./bucket.ts";
 import { S3 } from "./client.ts";
 import { encoder } from "./request.ts";
 
@@ -15,7 +14,6 @@ Deno.test({
   name: "[client] should get an existing bucket",
   async fn() {
     const bucket = await s3.getBucket("test");
-    assert(bucket instanceof S3Bucket);
 
     // Check if returned bucket instance is working.
     await bucket.putObject("test", encoder.encode("test"));
@@ -34,7 +32,6 @@ Deno.test({
     const bucket = await s3.createBucket("create-bucket-test", {
       acl: "public-read-write",
     });
-    assert(bucket instanceof S3Bucket);
 
     // Check if returned bucket instance is working.
     await bucket.putObject("test", encoder.encode("test"));
@@ -64,5 +61,9 @@ Deno.test({
       S3Error,
       'Failed to delete bucket "create-bucket-test": 404 Not Found',
     );
+
+    // teardown
+    await bucket.deleteObject("test");
+    // @TODO: delete also bucket once s3.deleteBucket is implemented.
   },
 });
