@@ -12,7 +12,7 @@ const bucket = new S3Bucket({
 const encoder = new TextEncoder();
 
 Deno.test({
-  name: "put object",
+  name: "[bucket] put object",
   async fn() {
     await bucket.putObject("test", encoder.encode("Test1"), {
       contentType: "text/plain",
@@ -24,7 +24,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with % in key",
+  name: "[bucket] put object with % in key",
   async fn() {
     await bucket.putObject(
       "ltest/versions/1.0.0/raw/fixtures/%",
@@ -38,7 +38,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with @ in key",
+  name: "[bucket] put object with @ in key",
   async fn() {
     await bucket.putObject(
       "dex/versions/1.0.0/raw/lib/deps/interpret@2.0.0/README.md",
@@ -54,7 +54,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "put object with 日本語 in key",
+  name: "[bucket] put object with 日本語 in key",
   async fn() {
     await bucket.putObject(
       "servest/versions/1.0.0/raw/fixtures/日本語.txt",
@@ -68,7 +68,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object success",
+  name: "[bucket] head object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -92,14 +92,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "head object not found",
+  name: "[bucket] head object not found",
   async fn() {
     assertEquals(await bucket.headObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "get object success",
+  name: "[bucket] get object success",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("Test1"), {
@@ -125,14 +125,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "get object not found",
+  name: "[bucket] get object not found",
   async fn() {
     assertEquals(await bucket.getObject("test2"), undefined);
   },
 });
 
 Deno.test({
-  name: "delete object",
+  name: "[bucket] delete object",
   async fn() {
     // setup
     await bucket.putObject("test", encoder.encode("test"));
@@ -149,7 +149,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "copy object",
+  name: "[bucket] copy object",
   async fn() {
     await bucket.putObject("test3", encoder.encode("Test1"));
     await bucket
@@ -172,7 +172,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "list objects",
+  name: "[bucket] list objects",
   async fn() {
     // setup
     const content = encoder.encode("Test1");
@@ -255,7 +255,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "empty bucket",
+  name: "[bucket] empty bucket",
   async fn() {
     // setup
     const content = encoder.encode("Test1");

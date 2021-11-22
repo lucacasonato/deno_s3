@@ -175,7 +175,7 @@ export interface HeadObjectResponse {
   /**
    * Amazon S3 can return this if your request involves a bucket that is
    * either a source or destination in a replication rule.
-   * */
+   */
   replicationStatus?: ReplicationStatus;
 
   /**
@@ -535,4 +535,72 @@ export interface DeleteObjectOptions {
 export interface DeleteObjectResponse {
   versionID?: string;
   deleteMarker: boolean;
+}
+
+export type LocationConstraint =
+  | "af-south-1"
+  | "ap-east-1"
+  | "ap-northeast-1"
+  | "ap-northeast-2"
+  | "ap-northeast-3"
+  | "ap-south-1"
+  | "ap-southeast-1"
+  | "ap-southeast-2"
+  | "ca-central-1"
+  | "cn-north-1"
+  | "cn-northwest-1"
+  | "EU"
+  | "Europe"
+  | "eu-central-1"
+  | "eu-north-1"
+  | "eu-south-1"
+  | "eu-west-1"
+  | "eu-west-2"
+  | "eu-west-3"
+  | "me-south-1"
+  | "sa-east-1"
+  | "us-east-1"
+  | "us-east-2"
+  | "us-gov-east-1"
+  | "us-gov-west-1"
+  | "us-west-1"
+  | "us-west-2";
+
+export interface CreateBucketConfiguration {
+  /**
+   * Specifies the Region where the bucket will be created. If you don't
+   * specify a Region, the bucket is created in the US East (N. Virginia)
+   * Region (us-east-1).
+   */
+  locationConstraint?: LocationConstraint;
+}
+
+export interface CreateBucketOptions extends CreateBucketConfiguration {
+  /** The canned ACL to apply to the bucket */
+  acl?:
+    | "private"
+    | "public-read"
+    | "public-read-write"
+    | "authenticated-read";
+
+  /** Specifies whether you want S3 Object Lock to be enabled for the new bucket. */
+  bucketObjectLockEnabled?: string;
+
+  /** Allows grantee the read, write, read ACP, and write ACP permissions on the bucket. */
+  grantFullControl?: string;
+
+  /** Allows grantee to list the objects in the bucket. */
+  grantRead?: string;
+
+  /** Allows grantee to read the bucket ACL. */
+  grantReadAcp?: string;
+
+  /**
+   * Allows grantee to create new objects in the bucket.
+   * For the bucket and object owners of existing objects, also allows deletions and overwrites of those objects.
+   */
+  grantWrite?: string;
+
+  /** Allows grantee to write the ACL for the applicable bucket. */
+  grantWriteAcp?: string;
 }
