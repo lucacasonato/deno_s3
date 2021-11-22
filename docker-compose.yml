@@ -3,10 +3,9 @@ version: "3"
 services:
   minio:
     image: minio/minio
-    command: server /data --console-address ":9001"
+    command: server /data
     environment:
       MINIO_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
       MINIO_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     ports:
       - "9000:9000"
-      - "9001:9001"
