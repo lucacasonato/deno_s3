@@ -1,5 +1,5 @@
 import { AWSSignerV4 } from "../deps.ts";
-import type { CreateBucketOptions } from "./types.ts";
+import type { CreateBucketOptions, HeadBucketOptions } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
 import { doRequest, encoder } from "./request.ts";
@@ -48,6 +48,44 @@ export class S3 {
       ...this.#config,
       bucket,
     });
+  }
+
+  /**
+   * Determine if a bucket exists and if you have permission to access it.
+   * The method returns a S3Bucket if the bucket exists and if you have
+   * permission to access it. If the bucket does not exist or you do not have
+   * permission to access it an `S3Error` is thrown.
+   *
+   * To use this operation, you must have permissions to perform the
+   * s3:ListBucket action. The bucket owner has this permission by default and
+   * can grant this permission to others.
+   */
+  async headBucket(
+    bucket: string,
+    options?: HeadBucketOptions,
+  ): Promise<S3Bucket> {
+    const headers: Params = {};
+
+    if (options?.expectedBucketOwner) {
+      headers["x-amz-expected-bucket-owner"] = options.expectedBucketOwner;
+    }
+
+    const resp = await doRequest({
+      host: this.#host,
+      signer: this.#signer,
+      path: bucket,
+      method: "HEAD",
+      headers,
+    });
+
+    if (resp.status !== 200) {
+      throw new S3Error(
+        `Failed to get bucket "${bucket}": ${resp.status} ${resp.statusText}`,
+        await resp.text(),
+      );
+    }
+
+    return this.getBucket(bucket);
   }
 
   /**

@@ -11,6 +11,7 @@ export type {
   DeleteObjectResponse,
   GetObjectOptions,
   GetObjectResponse,
+  HeadBucketOptions,
   HeadObjectResponse,
   ListAllObjectsOptions,
   ListObjectsOptions,

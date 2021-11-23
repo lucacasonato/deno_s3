@@ -537,6 +537,15 @@ export interface DeleteObjectResponse {
   deleteMarker: boolean;
 }
 
+export interface HeadBucketOptions {
+  /**
+   * The account ID of the expected bucket owner. If the bucket is owned by a
+   * different account, the request will fail with an HTTP 403 (Access Denied)
+   * error.
+   */
+  expectedBucketOwner?: string;
+}
+
 export type LocationConstraint =
   | "af-south-1"
   | "ap-east-1"

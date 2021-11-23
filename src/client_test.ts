@@ -11,7 +11,7 @@ const s3 = new S3({
 });
 
 Deno.test({
-  name: "[client] should get an existing bucket",
+  name: "[client] should get a bucket instance",
   async fn() {
     const bucket = await s3.getBucket("test");
 
@@ -20,6 +20,28 @@ Deno.test({
     const resp = await bucket.getObject("test");
     const body = await new Response(resp?.body).text();
     assertEquals(body, "test");
+
+    // teardown
+    await bucket.deleteObject("test");
+  },
+});
+
+Deno.test({
+  name: "[client] should determine if a bucket exists",
+  async fn() {
+    const bucket = await s3.headBucket("test");
+
+    // Check if returned bucket instance is working.
+    await bucket.putObject("test", encoder.encode("test"));
+    const resp = await bucket.getObject("test");
+    const body = await new Response(resp?.body).text();
+    assertEquals(body, "test");
+
+    await assertThrowsAsync(
+      () => s3.headBucket("not-existing-bucket"),
+      S3Error,
+      'Failed to get bucket "not-existing-bucket": 404 Not Found',
+    );
 
     // teardown
     await bucket.deleteObject("test");
