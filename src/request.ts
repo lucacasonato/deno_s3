@@ -1,4 +1,3 @@
-import { sha256Hex } from "../deps.ts";
 import type { Signer } from "../deps.ts";
 
 export interface Params {
@@ -39,7 +38,8 @@ export async function doRequest({
   });
 
   const signedRequest = await signer.sign("s3", request);
-  signedRequest.headers.set("x-amz-content-sha256", sha256Hex(body ?? ""));
+  const contentHash = await sha256Hex(body ?? "");
+  signedRequest.headers.set("x-amz-content-sha256", contentHash);
   if (body) {
     signedRequest.headers.set("content-length", body.length.toFixed(0));
   }
@@ -73,4 +73,14 @@ function stringToHex(input: string) {
     .map((s) => "%" + s.toString(16))
     .join("")
     .toUpperCase();
+}
+
+async function sha256Hex(data: string | Uint8Array): Promise<string> {
+  if (typeof data === "string") {
+    data = encoder.encode(data);
+  }
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(hash)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }

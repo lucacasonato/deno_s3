@@ -1,4 +1,9 @@
-import { AWSSignerV4, parseXML, pooledMap } from "../deps.ts";
+import {
+  AWSSignerV4,
+  decodeXMLEntities,
+  parseXML,
+  pooledMap,
+} from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
   CommonPrefix,
@@ -618,4 +623,41 @@ export class S3Bucket {
     }
     return deleted;
   }
+}
+
+interface Document {
+  declaration: {
+    attributes: Record<string, unknown>;
+  };
+  root: Xml | undefined;
+}
+
+interface Xml {
+  name: string;
+  attributes: unknown;
+  children: Xml[];
+  content?: string;
+}
+
+function extractRoot(doc: Document, name: string): Xml {
+  if (!doc.root || doc.root.name !== name) {
+    throw new S3Error(
+      `Malformed XML document. Missing ${name} field.`,
+      JSON.stringify(doc, undefined, 2),
+    );
+  }
+  return doc.root;
+}
+
+function extractField(node: Xml, name: string): Xml | undefined {
+  return node.children.find((node) => node.name === name);
+}
+
+function extractContent(node: Xml, name: string): string | undefined {
+  const field = extractField(node, name);
+  const content = field?.content;
+  if (content === undefined) {
+    return content;
+  }
+  return decodeXMLEntities(content);
 }
