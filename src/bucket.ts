@@ -1,9 +1,4 @@
-import {
-  AWSSignerV4,
-  decodeXMLEntities,
-  parseXML,
-  pooledMap,
-} from "../deps.ts";
+import { AWSSignerV4, parseXML, pooledMap } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
   CommonPrefix,
@@ -27,6 +22,8 @@ import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
 import { doRequest, encodeURIS3 } from "./request.ts";
 import type { Params } from "./request.ts";
+import type { Document } from "./xml.ts";
+import { extractContent, extractField, extractRoot } from "./xml.ts";
 
 export interface S3BucketConfig extends S3Config {
   bucket: string;
@@ -329,9 +326,7 @@ export class S3Bucket {
     }
 
     const parsed = {
-      isTruncated: extractContent(root, "IsTruncated") === "true"
-        ? true
-        : false,
+      isTruncated: extractContent(root, "IsTruncated") === "true",
       contents: root.children
         .filter((node) => node.name === "Contents")
         .map<S3Object>((s3obj) => {
@@ -623,41 +618,4 @@ export class S3Bucket {
     }
     return deleted;
   }
-}
-
-interface Document {
-  declaration: {
-    attributes: Record<string, unknown>;
-  };
-  root: Xml | undefined;
-}
-
-interface Xml {
-  name: string;
-  attributes: unknown;
-  children: Xml[];
-  content?: string;
-}
-
-function extractRoot(doc: Document, name: string): Xml {
-  if (!doc.root || doc.root.name !== name) {
-    throw new S3Error(
-      `Malformed XML document. Missing ${name} field.`,
-      JSON.stringify(doc, undefined, 2),
-    );
-  }
-  return doc.root;
-}
-
-function extractField(node: Xml, name: string): Xml | undefined {
-  return node.children.find((node) => node.name === name);
-}
-
-function extractContent(node: Xml, name: string): string | undefined {
-  const field = extractField(node, name);
-  const content = field?.content;
-  if (content === undefined) {
-    return content;
-  }
-  return decodeXMLEntities(content);
 }
