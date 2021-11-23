@@ -2,7 +2,6 @@ test: export AWS_REGION=us-east-1
 test: export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 test: export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 test: export S3_ENDPOINT_URL=http://localhost:9000
-test: export S3_REGION=us-east-1
 
 test:
 	docker-compose up -d
