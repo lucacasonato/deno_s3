@@ -47,6 +47,19 @@ Deno.test({
 
     // teardown
     await bucket.deleteObject("test");
-    // @TODO: delete also bucket once s3.deleteBucket is implemented.
+    await s3.deleteBucket("create-bucket-test");
+  },
+});
+
+Deno.test({
+  name: "[client] should delete a bucket",
+  async fn() {
+    await s3.createBucket("create-bucket-test");
+    await s3.deleteBucket("create-bucket-test");
+    await assertThrowsAsync(
+      () => s3.deleteBucket("create-bucket-test"),
+      S3Error,
+      'Failed to delete bucket "create-bucket-test": 404 Not Found',
+    );
   },
 });

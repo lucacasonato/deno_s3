@@ -7,6 +7,7 @@ export type {
   CopyObjectResponse,
   CreateBucketConfiguration,
   CreateBucketOptions,
+  DeleteBucketOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
   GetObjectOptions,
