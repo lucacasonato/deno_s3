@@ -61,9 +61,5 @@ Deno.test({
       S3Error,
       'Failed to delete bucket "create-bucket-test": 404 Not Found',
     );
-
-    // teardown
-    await bucket.deleteObject("test");
-    // @TODO: delete also bucket once s3.deleteBucket is implemented.
   },
 });
