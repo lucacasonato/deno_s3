@@ -37,9 +37,9 @@ export async function doRequest({
     body,
   });
 
-  const signedRequest = await signer.sign("s3", request);
   const contentHash = await sha256Hex(body ?? "");
-  signedRequest.headers.set("x-amz-content-sha256", contentHash);
+  request.headers.set("x-amz-content-sha256", contentHash);
+  const signedRequest = await signer.sign("s3", request);
   if (body) {
     signedRequest.headers.set("content-length", body.length.toFixed(0));
   }
