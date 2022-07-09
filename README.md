@@ -6,7 +6,7 @@
 
 Amazon S3 for Deno
 
-> ⚠️ This project is work in progress. Expect breaking changes.
+> **Warning** This project is work in progress. Expect breaking changes.
 
 ## Example
 
