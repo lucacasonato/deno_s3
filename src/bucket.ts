@@ -235,7 +235,7 @@ export class S3Bucket {
       body: res.body,
       contentLength: parseInt(res.headers.get("Content-Length")!),
       deleteMarker: res.headers.get("x-amz-delete-marker") === "true",
-      etag: JSON.parse(res.headers.get("etag")!),
+      etag: res.headers.get("etag")!,
       lastModified: new Date(res.headers.get("Last-Modified")!),
       missingMeta: parseInt(res.headers.get("x-amz-missing-meta") ?? "0"),
       storageClass: (res.headers.get("x-amz-storage-class") as StorageClass) ??
