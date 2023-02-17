@@ -274,7 +274,7 @@ export class S3Bucket {
     if (options?.maxKeys) {
       params["max-keys"] = options.maxKeys.toString();
     }
-    if (options?.prefix) {
+    if (options?.prefix != null) {
       params["prefix"] = options.prefix;
     }
     if (options?.continuationToken) {
@@ -360,14 +360,8 @@ export class S3Bucket {
       prefix: extractContent(root, "Prefix"),
       delimiter: extractContent(root, "Delimiter"),
       maxKeys: maxkeys,
-      commonPrefixes: extractField(
-        root,
-        "CommonPrefixes",
-      )?.children.map<CommonPrefix>((prefix) => {
-        return {
-          prefix: extractContent(prefix, "Prefix"),
-        };
-      }),
+      commonPrefixes: extractMultipleFields(root, "CommonPrefixes")
+        .map((node) => ({ prefix: extractContent(node, "Prefix") })),
       encodingType: extractContent(root, "EncodingType"),
       keyCount: keycount,
       continuationToken: extractContent(root, "ContinuationToken"),
@@ -651,6 +645,10 @@ function extractRoot(doc: Document, name: string): Xml {
 
 function extractField(node: Xml, name: string): Xml | undefined {
   return node.children.find((node) => node.name === name);
+}
+
+function extractMultipleFields(node: Xml, name: string): Xml[] {
+  return node.children.filter((node) => node.name === name);
 }
 
 function extractContent(node: Xml, name: string): string | undefined {
