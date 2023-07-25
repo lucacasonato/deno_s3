@@ -1,7 +1,8 @@
 import { assertEquals, assertThrowsAsync } from "../test_deps.ts";
 import { S3Error } from "./error.ts";
 import { S3 } from "./client.ts";
-import { encoder } from "./request.ts";
+
+const encoder = new TextEncoder();
 
 const s3 = new S3({
   accessKeyID: Deno.env.get("AWS_ACCESS_KEY_ID")!,

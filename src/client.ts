@@ -2,8 +2,10 @@ import { AWSSignerV4 } from "../deps.ts";
 import type { CreateBucketOptions } from "./types.ts";
 import { S3Error } from "./error.ts";
 import { S3Bucket } from "./bucket.ts";
-import { doRequest, encoder } from "./request.ts";
+import { doRequest } from "./request.ts";
 import type { Params } from "./request.ts";
+
+const encoder = new TextEncoder();
 
 export interface S3Config {
   region: string;

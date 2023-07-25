@@ -1,10 +1,11 @@
+import { encodeUriS3 } from "../deps.ts";
 import type { Signer } from "../deps.ts";
+
+const encoder = new TextEncoder();
 
 export interface Params {
   [key: string]: string;
 }
-
-export const encoder = new TextEncoder();
 
 interface S3RequestOptions {
   host: string;
@@ -25,7 +26,7 @@ export async function doRequest({
   headers,
   body,
 }: S3RequestOptions): Promise<Response> {
-  const url = path == "/" ? new URL(host) : new URL(encodeURIS3(path), host);
+  const url = path == "/" ? new URL(host) : new URL(encodeUriS3(path), host);
   if (params) {
     for (const key in params) {
       url.searchParams.set(key, params[key]);
@@ -44,35 +45,6 @@ export async function doRequest({
     signedRequest.headers.set("content-length", body.length.toFixed(0));
   }
   return fetch(signedRequest);
-}
-
-export function encodeURIS3(input: string): string {
-  let result = "";
-  for (const ch of input) {
-    if (
-      (ch >= "A" && ch <= "Z") ||
-      (ch >= "a" && ch <= "z") ||
-      (ch >= "0" && ch <= "9") ||
-      ch == "_" ||
-      ch == "-" ||
-      ch == "~" ||
-      ch == "."
-    ) {
-      result += ch;
-    } else if (ch == "/") {
-      result += "/";
-    } else {
-      result += stringToHex(ch);
-    }
-  }
-  return result;
-}
-
-function stringToHex(input: string) {
-  return [...encoder.encode(input)]
-    .map((s) => "%" + s.toString(16))
-    .join("")
-    .toUpperCase();
 }
 
 async function sha256Hex(data: string | Uint8Array): Promise<string> {

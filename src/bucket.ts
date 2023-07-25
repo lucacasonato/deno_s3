@@ -1,12 +1,12 @@
 import {
   AWSSignerV4,
   decodeXMLEntities,
+  encodeUriS3,
   parseXML,
   pooledMap,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
-  CommonPrefix,
   CopyObjectOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
@@ -25,7 +25,7 @@ import type {
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-import { doRequest, encodeURIS3 } from "./request.ts";
+import { doRequest } from "./request.ts";
 import type { Params } from "./request.ts";
 
 export interface S3BucketConfig extends S3Config {
@@ -475,7 +475,7 @@ export class S3Bucket {
   ): Promise<PutObjectResponse> {
     const headers: Params = {};
     headers["x-amz-copy-source"] = new URL(
-      encodeURIS3(source),
+      encodeUriS3(source),
       this.#host,
     ).toString();
     if (options?.acl) headers["x-amz-acl"] = options.acl;
