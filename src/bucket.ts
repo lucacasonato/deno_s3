@@ -1,12 +1,12 @@
 import {
   AWSSignerV4,
   decodeXMLEntities,
+  encodeUriS3,
   parseXML,
   pooledMap,
 } from "../deps.ts";
 import type { S3Config } from "./client.ts";
 import type {
-  CommonPrefix,
   CopyObjectOptions,
   DeleteObjectOptions,
   DeleteObjectResponse,
@@ -25,7 +25,7 @@ import type {
 } from "./types.ts";
 import { S3Error } from "./error.ts";
 import type { Signer } from "../deps.ts";
-import { doRequest, encodeURIS3 } from "./request.ts";
+import { doRequest } from "./request.ts";
 import type { Params } from "./request.ts";
 
 export interface S3BucketConfig extends S3Config {
@@ -274,7 +274,7 @@ export class S3Bucket {
     if (options?.maxKeys) {
       params["max-keys"] = options.maxKeys.toString();
     }
-    if (options?.prefix) {
+    if (options?.prefix != null) {
       params["prefix"] = options.prefix;
     }
     if (options?.continuationToken) {
@@ -360,14 +360,8 @@ export class S3Bucket {
       prefix: extractContent(root, "Prefix"),
       delimiter: extractContent(root, "Delimiter"),
       maxKeys: maxkeys,
-      commonPrefixes: extractField(
-        root,
-        "CommonPrefixes",
-      )?.children.map<CommonPrefix>((prefix) => {
-        return {
-          prefix: extractContent(prefix, "Prefix"),
-        };
-      }),
+      commonPrefixes: extractMultipleFields(root, "CommonPrefixes")
+        .map((node) => ({ prefix: extractContent(node, "Prefix") })),
       encodingType: extractContent(root, "EncodingType"),
       keyCount: keycount,
       continuationToken: extractContent(root, "ContinuationToken"),
@@ -481,7 +475,7 @@ export class S3Bucket {
   ): Promise<PutObjectResponse> {
     const headers: Params = {};
     headers["x-amz-copy-source"] = new URL(
-      encodeURIS3(source),
+      encodeUriS3(source),
       this.#host,
     ).toString();
     if (options?.acl) headers["x-amz-acl"] = options.acl;
@@ -651,6 +645,10 @@ function extractRoot(doc: Document, name: string): Xml {
 
 function extractField(node: Xml, name: string): Xml | undefined {
   return node.children.find((node) => node.name === name);
+}
+
+function extractMultipleFields(node: Xml, name: string): Xml[] {
+  return node.children.filter((node) => node.name === name);
 }
 
 function extractContent(node: Xml, name: string): string | undefined {
